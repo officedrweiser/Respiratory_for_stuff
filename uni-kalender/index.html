@@ -1,0 +1,1844 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Mein Uni-Kalender</title>
+<meta name="description" content="Persönlicher Stundenplan im Stil der Studo-App: Lehrveranstaltungen aus dem Uni-System, eigene Termine, Prüfungen und Aufgaben.">
+<meta name="apple-mobile-web-app-capable" content="yes" data-repo-only>
+<meta name="mobile-web-app-capable" content="yes" data-repo-only>
+<meta name="apple-mobile-web-app-status-bar-style" content="default" data-repo-only>
+<meta name="apple-mobile-web-app-title" content="Uni-Kalender" data-repo-only>
+<link rel="apple-touch-icon" href="icon-180.png" data-repo-only>
+<link rel="icon" href="icon.svg" type="image/svg+xml" data-repo-only>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: Ein-Bildschirm-App. Kopfzeile mit Wochenleiste, darunter ein scrollendes Zeitraster
+   wie im Hörsaal-Aushang; Tab-Leiste unten am Telefon, Seitenleiste ab 860px. */
+:root {
+  --bg: #EEF1F6;
+  --surface: #FFFFFF;
+  --surface-2: #E4E8F0;
+  --line: #D5DBE6;
+  --fg: #141A2A;
+  --muted: #5A6479;
+  --accent: #2742D0;
+  --accent-soft: #DDE3FB;
+  --accent-fg: #FFFFFF;
+  --now: #E0393E;
+  --warn: #9A5B00;
+  --warn-bg: #FFEFCF;
+  --danger: #C0343A;
+  --danger-bg: #FCE4E5;
+  --ok: #1B7F52;
+  --shadow: 0 10px 30px rgba(20, 26, 42, .16);
+  --font-display: "Bricolage Grotesque", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-body: "Figtree", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --hour: 54px;
+  --gutter: 16px;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0C1018; --surface: #151A25; --surface-2: #1F2533; --line: #2A3243; --fg: #E7EBF4; --muted: #9AA4B9;
+    --accent: #93A5FF; --accent-soft: #252F55; --accent-fg: #0C1018; --now: #FF6A6E; --warn: #F3B54E; --warn-bg: #3A2B0E;
+    --danger: #FF7D81; --danger-bg: #3D1619; --ok: #53C58F; --shadow: 0 10px 30px rgba(0, 0, 0, .5);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0C1018; --surface: #151A25; --surface-2: #1F2533; --line: #2A3243; --fg: #E7EBF4; --muted: #9AA4B9;
+  --accent: #93A5FF; --accent-soft: #252F55; --accent-fg: #0C1018; --now: #FF6A6E; --warn: #F3B54E; --warn-bg: #3A2B0E;
+  --danger: #FF7D81; --danger-bg: #3D1619; --ok: #53C58F; --shadow: 0 10px 30px rgba(0, 0, 0, .5);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { height: 100%; box-sizing: border-box; -webkit-text-size-adjust: 100%; }
+body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--fg); font: 15px/1.45 var(--font-body); }
+[hidden] { display: none !important; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+a { color: var(--accent); }
+.num { font-variant-numeric: tabular-nums; }
+
+/* ---------- Gerüst ---------- */
+#app { height: 100%; display: grid; grid-template-rows: minmax(0, 1fr) auto; grid-template-columns: minmax(0, 1fr); }
+.view { grid-row: 1; display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+.tabs { grid-row: 2; display: flex; background: var(--surface); border-top: 1px solid var(--line); padding: 4px 8px; }
+.tab { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 4px; border: 0; background: none; color: var(--muted); font-size: 11.5px; font-weight: 600; border-radius: 10px; }
+.tab svg { width: 22px; height: 22px; }
+.tab[aria-current="page"] { color: var(--accent); }
+.brand { display: none; }
+.side-next { display: none; }
+@media (min-width: 860px) {
+  #app { grid-template-columns: 236px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
+  .tabs { grid-row: 1; grid-column: 1; flex-direction: column; justify-content: flex-start; gap: 2px; border-top: 0; border-right: 1px solid var(--line); padding: 20px 14px; }
+  .tab { flex: 0 0 auto; flex-direction: row; gap: 12px; font-size: 15px; padding: 10px 12px; justify-content: flex-start; }
+  .tab[aria-current="page"] { background: var(--accent-soft); }
+  .view { grid-column: 2; }
+  .brand { display: block; font: 800 22px/1.1 var(--font-display); letter-spacing: -.01em; padding: 4px 12px 18px; }
+  .brand small { display: block; font: 500 12.5px/1.4 var(--font-body); color: var(--muted); letter-spacing: 0; margin-top: 4px; }
+  .side-next { display: block; margin-top: auto; padding: 12px; border-radius: 12px; background: var(--surface-2); font-size: 13px; }
+}
+
+/* ---------- Kopfzeile ---------- */
+.top { padding: 12px var(--gutter) 10px; background: var(--surface); border-bottom: 1px solid var(--line); display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+.top > * { min-width: 0; }
+.nl-wrap { display: grid; gap: 2px; min-width: 0; }
+.top-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.title-wrap { position: relative; flex: 1 1 auto; min-width: 0; }
+.title-wrap h1 { margin: 0; font: 800 clamp(22px, 5.6vw, 28px)/1.1 var(--font-display); letter-spacing: -.015em; text-wrap: balance; }
+.title-wrap .sub { color: var(--muted); font-size: 12.5px; font-weight: 600; letter-spacing: .03em; }
+.title-wrap input[type="date"] { position: absolute; inset: 0; opacity: 0; width: 100%; cursor: pointer; }
+.page-title { margin: 0; font: 800 clamp(22px, 5.6vw, 28px)/1.1 var(--font-display); letter-spacing: -.015em; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 36px; padding: 6px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); font-weight: 600; font-size: 14px; white-space: nowrap; }
+.btn:hover { background: var(--surface-2); }
+.btn:disabled { opacity: .45; cursor: default; }
+.btn.icon { width: 36px; padding: 0; }
+.btn.icon svg { width: 18px; height: 18px; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+.btn.primary:hover { filter: brightness(1.08); background: var(--accent); }
+.btn.danger { color: var(--danger); }
+.btn.danger.solid { background: var(--danger); border-color: var(--danger); color: var(--surface); }
+.btn.small { min-height: 30px; padding: 4px 10px; font-size: 13px; }
+label.btn { position: relative; overflow: hidden; }
+.vh { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; clip: rect(0 0 0 0); pointer-events: none; }
+.seg { display: inline-flex; padding: 3px; border-radius: 11px; background: var(--surface-2); }
+.seg button { border: 0; background: none; padding: 5px 14px; border-radius: 8px; font-weight: 600; font-size: 13.5px; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--fg); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+.next-line { display: flex; align-items: baseline; gap: 8px; font-size: 13.5px; min-width: 0; }
+.next-line .lbl { flex: none; font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--accent); }
+.next-line .txt { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.next-line.side { flex-direction: column; gap: 2px; }
+.next-line.side + .next-line.side { margin-top: 8px; }
+.next-line.side .txt { white-space: normal; }
+
+/* Wochenleiste */
+.strip { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.strip button { border: 0; background: none; border-radius: 12px; padding: 4px 0 6px; display: grid; justify-items: center; gap: 1px; color: var(--muted); }
+.strip .wd { font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
+.strip .dn { font: 700 18px/1.2 var(--font-display); color: var(--fg); width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; font-variant-numeric: tabular-nums; }
+.strip .today .dn { color: var(--accent); }
+.strip .sel .dn { background: var(--accent); color: var(--accent-fg); }
+.strip .dots { display: flex; gap: 3px; height: 6px; }
+.strip .dots i { width: 5px; height: 5px; border-radius: 50%; background: var(--c); }
+
+.banner { margin: 10px var(--gutter) 0; padding: 10px 12px; border-radius: 12px; background: var(--accent-soft); font-size: 13.5px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.banner p { margin: 0; flex: 1 1 220px; }
+
+/* ---------- Zeitraster ---------- */
+.scroller { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; position: relative; }
+.cal { padding: 0 var(--gutter) 96px; }
+.cal-head, .allday, .cal-body { display: grid; grid-template-columns: 44px repeat(var(--days), minmax(0, 1fr)); }
+.cal-head { position: sticky; top: 0; z-index: 4; background: var(--bg); padding-top: 8px; }
+.cal-head .dh { text-align: center; padding: 4px 0 6px; border-radius: 10px; color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; border: 0; background: none; }
+.cal-head .dh b { display: block; font: 700 19px/1.15 var(--font-display); color: var(--fg); letter-spacing: 0; font-variant-numeric: tabular-nums; }
+.cal-head .dh.today b { color: var(--accent); }
+.allday { padding: 6px 0; border-bottom: 1px solid var(--line); min-height: 8px; }
+.allday .gl { font-size: 10.5px; color: var(--muted); align-self: center; font-weight: 600; }
+.allday .ac { display: grid; gap: 3px; padding: 0 2px; align-content: start; min-width: 0; }
+.chip { display: block; width: 100%; text-align: left; border: 0; border-radius: 6px; padding: 2px 6px; font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: color-mix(in srgb, var(--c) 24%, var(--surface)); color: var(--fg); }
+.chip.task { background: var(--surface); border: 1px dashed color-mix(in srgb, var(--c) 70%, var(--line)); }
+.chip.done { text-decoration: line-through; color: var(--muted); }
+.cal-body { position: relative; }
+.hours { position: relative; }
+.hours span { position: absolute; right: 8px; transform: translateY(-50%); font-size: 11px; color: var(--muted); font-weight: 600; font-variant-numeric: tabular-nums; }
+.col { position: relative; border-left: 1px solid var(--line); background-image: repeating-linear-gradient(to bottom, var(--line) 0 1px, transparent 1px var(--hour)); }
+.col.today { background-color: color-mix(in srgb, var(--accent) 5%, transparent); }
+.col.weekend { background-color: color-mix(in srgb, var(--surface-2) 45%, transparent); }
+.ev { position: absolute; left: calc(var(--x) * 100% / var(--n) + 2px); width: calc(100% / var(--n) - 4px); border: 1px solid color-mix(in srgb, var(--c) 55%, var(--surface)); border-radius: 8px; padding: 3px 6px; overflow: hidden; text-align: left; background: color-mix(in srgb, var(--c) 26%, var(--surface)); color: var(--fg); font-size: 12px; line-height: 1.25; display: flex; flex-direction: column; gap: 1px; }
+.ev:hover { background: color-mix(in srgb, var(--c) 34%, var(--surface)); }
+.ev .t { font-weight: 700; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: anywhere; }
+.ev .m { color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.ev .tags { display: flex; gap: 3px; flex-wrap: wrap; }
+.ev.short .tags, .ev.short .m.loc { display: none; }
+.ev.cancelled { background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--c) 10%, var(--surface)) 0 6px, var(--surface) 6px 12px); border-style: dashed; }
+.ev.cancelled .t { text-decoration: line-through; color: var(--muted); }
+.ev.exam { border: 2px solid var(--danger); }
+.ev.past { opacity: .62; }
+.now { position: absolute; left: -5px; right: 0; height: 2px; background: var(--now); z-index: 3; pointer-events: none; }
+.now::before { content: ""; position: absolute; left: 0; top: -4px; width: 10px; height: 10px; border-radius: 50%; background: var(--now); }
+
+.badge { display: inline-block; font-size: 10px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; padding: 1px 6px; border-radius: 999px; line-height: 1.5; white-space: nowrap; }
+.badge.type { background: color-mix(in srgb, var(--c, var(--muted)) 18%, var(--surface)); color: var(--fg); }
+.badge.exam { background: var(--danger-bg); color: var(--danger); }
+.badge.chg { background: var(--warn-bg); color: var(--warn); }
+.badge.off { background: var(--surface-2); color: var(--muted); }
+.badge.new { background: var(--accent-soft); color: var(--accent); }
+
+/* ---------- Liste ---------- */
+.list { padding: 4px var(--gutter) 110px; display: grid; gap: 4px; max-width: 760px; }
+.day-h { position: sticky; top: 0; z-index: 2; background: var(--bg); padding: 14px 0 6px; display: flex; align-items: baseline; gap: 8px; }
+.day-h h3 { margin: 0; font: 700 17px/1.2 var(--font-display); }
+.day-h span { color: var(--muted); font-size: 13px; font-weight: 600; }
+.row { display: grid; grid-template-columns: 62px 4px minmax(0, 1fr); gap: 10px; align-items: stretch; width: 100%; text-align: left; border: 0; background: var(--surface); border-radius: 12px; padding: 10px 12px; color: var(--fg); }
+.row:hover { background: color-mix(in srgb, var(--surface-2) 60%, var(--surface)); }
+.row .tm { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.3; }
+.row .tm small { display: block; color: var(--muted); font-weight: 500; }
+.row .bar { border-radius: 4px; background: var(--c); }
+.row .bd { min-width: 0; display: grid; gap: 3px; }
+.row .bd b { font-weight: 700; overflow-wrap: anywhere; }
+.row .bd .meta { color: var(--muted); font-size: 13px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.row.cancelled b { text-decoration: line-through; color: var(--muted); }
+.row.task .bar { background: repeating-linear-gradient(to bottom, var(--c) 0 4px, transparent 4px 7px); }
+.empty { padding: 40px 8px; color: var(--muted); text-align: center; display: grid; gap: 12px; justify-items: center; }
+.empty strong { color: var(--fg); font: 700 18px/1.3 var(--font-display); }
+
+/* ---------- Seiten (Aufgaben, Kurse, Quellen) ---------- */
+.page { padding: 16px var(--gutter) 120px; display: grid; gap: 22px; max-width: 820px; align-content: start; }
+.section { display: grid; gap: 10px; }
+.section > h2 { margin: 0; font: 700 18px/1.25 var(--font-display); }
+.section > p.hint, .hint { margin: 0; color: var(--muted); font-size: 13.5px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px; display: grid; gap: 12px; min-width: 0; }
+.items { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.item { display: flex; gap: 12px; align-items: center; padding: 12px 14px; border-top: 1px solid var(--line); min-width: 0; }
+.item:first-child { border-top: 0; }
+.item .grow { flex: 1 1 auto; min-width: 0; display: grid; gap: 2px; }
+.item .grow b { overflow-wrap: anywhere; font-weight: 650; }
+.item .grow .meta { color: var(--muted); font-size: 13px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.item.done .grow b { text-decoration: line-through; color: var(--muted); }
+.swatch { flex: none; width: 26px; height: 26px; border-radius: 8px; border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--line); background: var(--c); padding: 0; }
+.palette { display: flex; flex-wrap: wrap; gap: 8px; padding: 4px 14px 14px 52px; }
+.palette button { width: 30px; height: 30px; border-radius: 50%; border: 3px solid var(--surface); box-shadow: 0 0 0 1px var(--line); background: var(--c); padding: 0; }
+.palette button[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--fg); }
+.check { flex: none; width: 24px; height: 24px; border-radius: 50%; border: 2px solid color-mix(in srgb, var(--c, var(--muted)) 80%, var(--line)); background: none; display: grid; place-items: center; padding: 0; }
+.check[aria-checked="true"] { background: var(--c, var(--accent)); border-color: var(--c, var(--accent)); }
+.check svg { width: 14px; height: 14px; color: var(--surface); }
+.switch { flex: none; position: relative; width: 44px; height: 26px; border-radius: 999px; border: 0; background: var(--surface-2); padding: 0; transition: background .15s; }
+.switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--surface); box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: transform .15s; }
+.switch[aria-checked="true"] { background: var(--ok); }
+.switch[aria-checked="true"]::after { transform: translateX(18px); }
+.group-h { font-size: 12px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); margin: 6px 2px -4px; }
+.group-h.danger { color: var(--danger); }
+.due { font-weight: 600; }
+.due.over { color: var(--danger); }
+.due.soon { color: var(--warn); }
+
+label.f { display: grid; gap: 4px; font-size: 13px; font-weight: 600; color: var(--muted); min-width: 0; }
+input.in, select.in, textarea.in { width: 100%; min-width: 0; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); padding: 9px 10px; font-size: 16px; color: var(--fg); }
+textarea.in { min-height: 76px; resize: vertical; }
+.frow { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+.inline { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.cb { display: inline-flex; gap: 8px; align-items: center; font-size: 14px; font-weight: 600; color: var(--fg); }
+.drop { border: 2px dashed var(--line); border-radius: 14px; padding: 18px; text-align: center; color: var(--muted); display: grid; gap: 8px; justify-items: center; }
+.drop.over { border-color: var(--accent); background: var(--accent-soft); color: var(--fg); }
+details.help { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 4px 14px; }
+details.help summary { cursor: pointer; padding: 10px 0; font-weight: 700; }
+details.help div { padding: 0 0 12px; font-size: 14px; display: grid; gap: 8px; }
+details.help p, details.help ul { margin: 0; }
+details.help ul { padding-left: 18px; display: grid; gap: 6px; }
+.status { font-size: 13px; color: var(--muted); }
+.err { color: var(--danger); font-size: 13px; overflow-wrap: anywhere; }
+code { font-size: .92em; background: var(--surface-2); padding: 1px 5px; border-radius: 5px; overflow-wrap: anywhere; }
+
+/* ---------- Schaltfläche, Blatt, Hinweis ---------- */
+.fab { position: absolute; right: var(--gutter); bottom: 16px; z-index: 6; width: 56px; height: 56px; border-radius: 18px; border: 0; background: var(--accent); color: var(--accent-fg); box-shadow: var(--shadow); display: grid; place-items: center; }
+.fab svg { width: 26px; height: 26px; }
+.view-wrap { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.overlay { position: fixed; inset: 0; z-index: 20; background: rgba(8, 11, 18, .45); display: flex; align-items: flex-end; justify-content: center; }
+.sheet { width: min(560px, 100%); max-height: 88%; overflow: auto; background: var(--surface); border-radius: 20px 20px 0 0; padding: 18px var(--gutter) calc(20px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 14px; box-shadow: var(--shadow); }
+@media (min-width: 700px) { .overlay { align-items: center; } .sheet { border-radius: 20px; padding-bottom: 20px; } }
+.sheet h2 { margin: 0; font: 800 22px/1.2 var(--font-display); overflow-wrap: anywhere; text-wrap: balance; }
+.sheet .kv { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 10px; align-items: start; font-size: 14.5px; }
+.sheet .kv svg { width: 18px; height: 18px; color: var(--muted); margin-top: 2px; }
+.sheet .kv div { min-width: 0; overflow-wrap: anywhere; white-space: pre-line; }
+.sheet .acts { display: flex; gap: 8px; flex-wrap: wrap; }
+.sheet .acts .sp { flex: 1; }
+.sheet-head { display: flex; gap: 10px; align-items: flex-start; }
+.sheet-head .dot { flex: none; width: 14px; height: 14px; border-radius: 4px; background: var(--c); margin-top: 7px; }
+.sheet-head > div { flex: 1; min-width: 0; display: grid; gap: 6px; }
+.toast { position: fixed; left: 50%; bottom: calc(84px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 30; background: var(--fg); color: var(--bg); border-radius: 12px; padding: 10px 14px; font-size: 14px; font-weight: 600; display: flex; gap: 12px; align-items: center; box-shadow: var(--shadow); max-width: calc(100% - 32px); }
+.toast button { border: 0; background: none; color: var(--accent-soft); font-weight: 800; padding: 0; }
+@media (min-width: 860px) { .toast { bottom: 24px; } }
+@media (prefers-reduced-motion: no-preference) {
+  .sheet { animation: rise .18s ease-out; }
+  @keyframes rise { from { transform: translateY(16px); opacity: .6; } to { transform: none; opacity: 1; } }
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <nav class="tabs" id="tabs" aria-label="Bereiche">
+    <div class="brand">Mein Uni-Kalender<small id="brand-sem"></small></div>
+    <button class="tab" data-tab="cal" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="16.5" rx="3"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/></svg>Kalender</button>
+    <button class="tab" data-tab="tasks"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><path d="m3.5 6 1.5 1.5L7.5 5M3.5 12l1.5 1.5 2.5-2.5M3.5 18l1.5 1.5 2.5-2.5"/></svg>Aufgaben</button>
+    <button class="tab" data-tab="courses"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5A2.5 2.5 0 0 0 6.5 23H20v-5"/></svg>Kurse</button>
+    <button class="tab" data-tab="sources"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>Quellen</button>
+    <div class="side-next" id="side-next" hidden></div>
+  </nav>
+  <main class="view" id="view"></main>
+</div>
+<div id="overlay-root"></div>
+<div id="toast-root"></div>
+
+<script>
+"use strict";
+
+/* =====================================================================
+   1. Hilfsfunktionen
+   ===================================================================== */
+const DAY = 86400000;
+const WD_SHORT = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
+const WD_LONG = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"];
+const MONTHS = ["Jänner", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
+const PALETTE = ["#2F6FED", "#E0672F", "#1E9E6A", "#C2417A", "#7A5AF8", "#C99A00", "#0E95A3", "#D9393E", "#5B7083", "#8B5E34", "#4C9A2A", "#B04FC9"];
+
+const pad = n => String(n).padStart(2, "0");
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+const startOfDay = ms => { const d = new Date(ms); d.setHours(0, 0, 0, 0); return d.getTime(); };
+const addDays = (ms, n) => { const d = new Date(ms); d.setDate(d.getDate() + n); return d.getTime(); };
+const startOfWeek = ms => { const d = new Date(startOfDay(ms)); const wd = (d.getDay() + 6) % 7; d.setDate(d.getDate() - wd); return d.getTime(); };
+const dateKey = ms => { const d = new Date(ms); return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); };
+const fromKey = k => { const [y, m, d] = k.split("-").map(Number); return new Date(y, m - 1, d).getTime(); };
+const hm = ms => { const d = new Date(ms); return pad(d.getHours()) + ":" + pad(d.getMinutes()); };
+const dShort = ms => { const d = new Date(ms); return WD_SHORT[d.getDay()] + " " + d.getDate() + "." + (d.getMonth() + 1) + "."; };
+const dLong = ms => { const d = new Date(ms); return WD_LONG[d.getDay()] + ", " + d.getDate() + ". " + MONTHS[d.getMonth()] + " " + d.getFullYear(); };
+
+function isoWeek(ms) {
+  const d = new Date(startOfDay(ms));
+  d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
+  const w1 = new Date(d.getFullYear(), 0, 4);
+  return 1 + Math.round(((d - w1) / DAY - 3 + ((w1.getDay() + 6) % 7)) / 7);
+}
+/* Österreichisches Studienjahr: WS 1.10.–28.2., SS 1.3.–30.9. */
+function semesterLabel(ms) {
+  const d = new Date(ms), y = d.getFullYear(), m = d.getMonth() + 1;
+  if (m >= 10) return "WS " + y + "/" + String(y + 1).slice(2);
+  if (m <= 2) return "WS " + (y - 1) + "/" + String(y).slice(2);
+  return "SS " + y;
+}
+function relDay(ms) {
+  const diff = Math.round((startOfDay(ms) - startOfDay(Date.now())) / DAY);
+  if (diff === 0) return "Heute";
+  if (diff === 1) return "Morgen";
+  if (diff === -1) return "Gestern";
+  return null;
+}
+function ago(ms) {
+  if (!ms) return "noch nie";
+  const s = Math.round((Date.now() - ms) / 1000);
+  if (s < 60) return "gerade eben";
+  if (s < 3600) return "vor " + Math.round(s / 60) + " Min.";
+  if (s < 86400) return "vor " + Math.round(s / 3600) + " Std.";
+  return "am " + dShort(ms) + " " + hm(ms);
+}
+function hashStr(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+
+/* =====================================================================
+   2. iCalendar-Import (RFC 5545) – das Herzstück
+   Uni-Systeme (CAMPUSonline, TISS, u:space, Moodle, LSF …) bieten fast
+   alle einen iCal-Export. Hier wird er gelesen: Zeilen entfalten,
+   Zeitzonen umrechnen, Serien (RRULE) aufklappen, Ausnahmen beachten.
+   ===================================================================== */
+// ICS-START
+const ICS = (() => {
+  const WIN_TZ = {
+    "W. Europe Standard Time": "Europe/Berlin", "Central Europe Standard Time": "Europe/Budapest",
+    "Central European Standard Time": "Europe/Warsaw", "Romance Standard Time": "Europe/Paris",
+    "GMT Standard Time": "Europe/London", "UTC": "UTC", "Coordinated Universal Time": "UTC",
+    "E. Europe Standard Time": "Europe/Bucharest", "FLE Standard Time": "Europe/Kiev",
+    "Eastern Standard Time": "America/New_York", "Pacific Standard Time": "America/Los_Angeles"
+  };
+  const tzOk = {};
+  function validTz(tz) {
+    if (tz in tzOk) return tzOk[tz];
+    try { new Intl.DateTimeFormat("en-US", { timeZone: tz }); tzOk[tz] = true; } catch (e) { tzOk[tz] = false; }
+    return tzOk[tz];
+  }
+  function normTz(raw) {
+    if (!raw) return null;
+    let tz = String(raw).replace(/^"|"$/g, "").trim();
+    if (WIN_TZ[tz]) return WIN_TZ[tz];
+    if (validTz(tz)) return tz;
+    const parts = tz.split("/").filter(Boolean);
+    for (let i = Math.max(0, parts.length - 3); i < parts.length - 1; i++) {
+      const cand = parts.slice(i).join("/");
+      if (validTz(cand)) return cand;
+    }
+    return null; // unbekannt → als lokale Zeit behandeln
+  }
+  const fmtCache = {};
+  function tzOffset(ms, tz) {
+    let f = fmtCache[tz];
+    if (!f) f = fmtCache[tz] = new Intl.DateTimeFormat("en-US", { timeZone: tz, hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    const o = {};
+    for (const p of f.formatToParts(new Date(ms))) o[p.type] = p.value;
+    const asUtc = Date.UTC(+o.year, +o.month - 1, +o.day, (+o.hour) % 24, +o.minute, +o.second);
+    return asUtc - Math.floor(ms / 1000) * 1000;
+  }
+  function zonedToUtc(p, tz) {
+    const guess = Date.UTC(p.y, p.m - 1, p.d, p.h, p.mi, p.s);
+    const off = tzOffset(guess, tz);
+    let res = guess - off;
+    const off2 = tzOffset(res, tz);
+    if (off2 !== off) res = guess - off2;
+    return res;
+  }
+  function toMs(p) {
+    if (p.allDay) return new Date(p.y, p.m - 1, p.d).getTime();
+    if (p.tz === "UTC") return Date.UTC(p.y, p.m - 1, p.d, p.h, p.mi, p.s);
+    if (!p.tz) return new Date(p.y, p.m - 1, p.d, p.h, p.mi, p.s).getTime();
+    return zonedToUtc(p, p.tz);
+  }
+  function parseDate(value, params) {
+    const m = /^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})?(Z)?)?$/.exec(String(value).trim());
+    if (!m) return null;
+    const p = { y: +m[1], m: +m[2], d: +m[3], h: +(m[4] || 0), mi: +(m[5] || 0), s: +(m[6] || 0) };
+    if (!m[4] || (params && params.VALUE === "DATE")) return Object.assign(p, { allDay: true, tz: null });
+    return Object.assign(p, { allDay: false, tz: m[7] ? "UTC" : normTz(params && params.TZID) });
+  }
+  function parseDuration(v) {
+    const m = /^([+-])?P(?:(\d+)W)?(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?$/.exec(String(v).trim());
+    if (!m) return null;
+    const ms = ((+m[2] || 0) * 7 * 86400 + (+m[3] || 0) * 86400 + (+m[4] || 0) * 3600 + (+m[5] || 0) * 60 + (+m[6] || 0)) * 1000;
+    return m[1] === "-" ? -ms : ms;
+  }
+  function unescapeText(v) { return String(v).replace(/\\(.)/g, (_, c) => (c === "n" || c === "N") ? "\n" : c); }
+  function splitOutsideQuotes(s, sep) {
+    const out = []; let cur = "", q = false;
+    for (const ch of s) {
+      if (ch === '"') q = !q;
+      if (ch === sep && !q) { out.push(cur); cur = ""; } else cur += ch;
+    }
+    out.push(cur);
+    return out;
+  }
+  function parseLine(line) {
+    let q = false, colon = -1;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') q = !q;
+      else if (ch === ":" && !q) { colon = i; break; }
+    }
+    if (colon < 0) return null;
+    const head = splitOutsideQuotes(line.slice(0, colon), ";");
+    const params = {};
+    for (const p of head.slice(1)) {
+      const eq = p.indexOf("=");
+      if (eq > 0) params[p.slice(0, eq).toUpperCase()] = p.slice(eq + 1).replace(/^"|"$/g, "");
+    }
+    return { name: head[0].toUpperCase(), params, value: line.slice(colon + 1) };
+  }
+
+  /* Rohdaten → Liste von VEVENT-Objekten */
+  function parseComponents(text) {
+    const lines = String(text).replace(/^\uFEFF/, "").replace(/\r\n|\r/g, "\n").replace(/\n[ \t]/g, "").split("\n");
+    const events = []; const stack = []; let cur = null; let calName = null;
+    for (const raw of lines) {
+      if (!raw.trim()) continue;
+      const pl = parseLine(raw);
+      if (!pl) continue;
+      if (pl.name === "BEGIN") {
+        stack.push(pl.value.toUpperCase());
+        if (pl.value.toUpperCase() === "VEVENT") cur = { EXDATE: [], RDATE: [], CATEGORIES: [] };
+        continue;
+      }
+      if (pl.name === "END") {
+        const top = stack.pop();
+        if (top === "VEVENT" && cur) { events.push(cur); cur = null; }
+        continue;
+      }
+      const inEvent = stack[stack.length - 1] === "VEVENT";
+      if (!inEvent) {
+        if (pl.name === "X-WR-CALNAME" && stack[stack.length - 1] === "VCALENDAR") calName = unescapeText(pl.value);
+        continue;
+      }
+      if (pl.name === "EXDATE" || pl.name === "RDATE") {
+        for (const v of pl.value.split(",")) cur[pl.name].push({ value: v, params: pl.params });
+      } else if (pl.name === "CATEGORIES") {
+        for (const v of splitOutsideQuotes(pl.value, ",")) if (v.trim()) cur.CATEGORIES.push(unescapeText(v.trim()));
+      } else if (!(pl.name in cur)) {
+        cur[pl.name] = pl;
+      }
+    }
+    return { events, calName };
+  }
+
+  function parseRule(str) {
+    const r = {};
+    for (const part of String(str).split(";")) {
+      const [k, v] = part.split("=");
+      if (k && v !== undefined) r[k.toUpperCase()] = v;
+    }
+    return r;
+  }
+  const WD_CODES = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"];
+  function ymdAdd(p, days) { const t = new Date(Date.UTC(p.y, p.m - 1, p.d + days)); return { y: t.getUTCFullYear(), m: t.getUTCMonth() + 1, d: t.getUTCDate() }; }
+  function weekdayOf(y, m, d) { return new Date(Date.UTC(y, m - 1, d)).getUTCDay(); }
+  function daysInMonth(y, m) { return new Date(Date.UTC(y, m, 0)).getUTCDate(); }
+
+  /* Serie aufklappen: arbeitet in der Wanduhrzeit der Zeitzone, damit
+     Sommer-/Winterzeit-Wechsel die Uhrzeit nicht verschieben. */
+  function expandRule(start, rule, winStart, winEnd) {
+    const r = parseRule(rule);
+    const freq = r.FREQ, interval = Math.max(1, +r.INTERVAL || 1);
+    const count = r.COUNT ? +r.COUNT : Infinity;
+    let until = Infinity;
+    if (r.UNTIL) {
+      const up = parseDate(r.UNTIL, {});
+      if (up) until = up.allDay ? toMs(up) + DAY - 1 : (up.tz ? toMs(up) : toMs(Object.assign({}, up, { tz: start.tz })));
+    }
+    const byDay = r.BYDAY ? r.BYDAY.split(",").map(s => { const m = /^([+-]?\d+)?([A-Z]{2})$/.exec(s.trim().toUpperCase()); return m ? { n: m[1] ? +m[1] : 0, wd: WD_CODES.indexOf(m[2]) } : null; }).filter(x => x && x.wd >= 0) : null;
+    const byMonthDay = r.BYMONTHDAY ? r.BYMONTHDAY.split(",").map(Number).filter(Boolean) : null;
+    const byMonth = r.BYMONTH ? r.BYMONTH.split(",").map(Number).filter(Boolean) : null;
+    const startMs = toMs(start);
+    const out = [];
+    let n = 0, guard = 0;
+    const emit = (ymd) => {
+      const p = Object.assign({}, start, ymd);
+      const ms = toMs(p);
+      if (ms < startMs) return true;
+      n++;
+      if (n > count || ms > until || ms > winEnd) return false;
+      if (ms >= winStart) out.push(ms);
+      return true;
+    };
+    const base = { y: start.y, m: start.m, d: start.d };
+    if (freq === "DAILY") {
+      for (let i = 0; guard++ < 20000; i += interval) {
+        const ymd = ymdAdd(base, i);
+        if (byMonth && !byMonth.includes(ymd.m)) continue;
+        if (byDay && !byDay.some(b => b.wd === weekdayOf(ymd.y, ymd.m, ymd.d))) continue;
+        if (!emit(ymd)) break;
+      }
+    } else if (freq === "WEEKLY") {
+      const wdStart = weekdayOf(base.y, base.m, base.d);
+      const mondayOffset = (wdStart + 6) % 7;
+      const weekStart = ymdAdd(base, -mondayOffset);
+      const days = (byDay && byDay.length ? byDay.map(b => b.wd) : [wdStart]).map(wd => (wd + 6) % 7).sort((a, b) => a - b);
+      outer: for (let w = 0; guard++ < 5000; w += interval) {
+        for (const off of days) {
+          const ymd = ymdAdd(weekStart, w * 7 + off);
+          if (!emit(ymd)) break outer;
+        }
+      }
+    } else if (freq === "MONTHLY") {
+      outer: for (let i = 0; guard++ < 3000; i += interval) {
+        const y = base.y + Math.floor((base.m - 1 + i) / 12), m = ((base.m - 1 + i) % 12) + 1;
+        if (byMonth && !byMonth.includes(m)) continue;
+        const dim = daysInMonth(y, m);
+        let ds = [];
+        if (byMonthDay) ds = byMonthDay.map(x => x > 0 ? x : dim + x + 1).filter(x => x >= 1 && x <= dim);
+        else if (byDay) {
+          for (const b of byDay) {
+            const all = [];
+            for (let d = 1; d <= dim; d++) if (weekdayOf(y, m, d) === b.wd) all.push(d);
+            if (b.n > 0 && all[b.n - 1]) ds.push(all[b.n - 1]);
+            else if (b.n < 0 && all[all.length + b.n]) ds.push(all[all.length + b.n]);
+            else if (b.n === 0) ds.push(...all);
+          }
+        } else if (base.d <= dim) ds = [base.d];
+        ds.sort((a, b) => a - b);
+        for (const d of ds) if (!emit({ y, m, d })) break outer;
+      }
+    } else if (freq === "YEARLY") {
+      outer: for (let i = 0; guard++ < 300; i += interval) {
+        const y = base.y + i;
+        for (const m of (byMonth || [base.m])) {
+          const dim = daysInMonth(y, m);
+          const ds = byMonthDay ? byMonthDay.map(x => x > 0 ? x : dim + x + 1) : [base.d];
+          for (const d of ds) { if (d < 1 || d > dim) continue; if (!emit({ y, m, d })) break outer; }
+        }
+      }
+    } else {
+      emit(base);
+    }
+    return out;
+  }
+
+  /* Aufbereitung für die App */
+  const TYPE_ABBR = /(?:^|[^A-Za-zÄÖÜäöü])(VO|VU|UE|SE|PS|PR|PV|LU|KU|EX|PJ|AG|VL|IK|KS|UV|VK|SL|SV|KV)(?=$|[^A-Za-zÄÖÜäöü])/;
+  const TYPE_WORD = [[/proseminar/i, "PS"], [/vorlesung mit übung/i, "VU"], [/vorlesung/i, "VO"], [/übung/i, "UE"], [/seminar/i, "SE"], [/tutorium/i, "TUT"], [/praktikum|laborübung/i, "PR"], [/exkursion/i, "EX"]];
+  const CANCEL_RE = /\s*[(\[]?\s*(entfällt|entfallen|abgesagt|fällt aus|cancell?ed|storniert)\s*[)\]]?\s*[:\-–]?\s*/ig;
+  const EXAM_RE = /(prüfung(?!svorbereitung)|klausur|\bexam|\btest\b|zwischentest|endtest|nachtest|teiltest|testat|kolloquium|kreuzerl)/i;
+  function cleanTitle(t) { return String(t || "").replace(CANCEL_RE, " ").replace(/\s{2,}/g, " ").replace(/^[\s:\-–]+|[\s:\-–]+$/g, "").trim() || "Ohne Titel"; }
+  function courseType(title, cats) {
+    const m = TYPE_ABBR.exec(title);
+    if (m) return m[1];
+    const hay = title + " " + (cats || []).join(" ");
+    for (const [re, ab] of TYPE_WORD) if (re.test(hay)) return ab;
+    return "";
+  }
+  function courseKey(title) { return title.toLowerCase().replace(/\s+/g, " ").trim(); }
+
+  function parse(text, opts) {
+    opts = opts || {};
+    const now = Date.now();
+    const winStart = opts.winStart ?? now - 200 * DAY;
+    const winEnd = opts.winEnd ?? now + 420 * DAY;
+    const { events: comps, calName } = parseComponents(text);
+    const overrides = {}; // uid → Set(ms)
+    for (const c of comps) {
+      if (c["RECURRENCE-ID"] && c.UID) {
+        const p = parseDate(c["RECURRENCE-ID"].value, c["RECURRENCE-ID"].params);
+        if (p) (overrides[c.UID.value] = overrides[c.UID.value] || new Set()).add(toMs(p));
+      }
+    }
+    const out = []; const seen = {};
+    for (const c of comps) {
+      if (!c.DTSTART) continue;
+      const sp = parseDate(c.DTSTART.value, c.DTSTART.params);
+      if (!sp) continue;
+      const startMs = toMs(sp);
+      let dur;
+      if (c.DTEND) {
+        const ep = parseDate(c.DTEND.value, c.DTEND.params);
+        dur = ep ? toMs(!ep.allDay && !ep.tz && sp.tz ? Object.assign({}, ep, { tz: sp.tz }) : ep) - startMs : 0;
+      }
+      else if (c.DURATION) dur = parseDuration(c.DURATION.value) || 0;
+      else dur = sp.allDay ? DAY : 0;
+      if (!(dur >= 0)) dur = 0;
+      const rawTitle = c.SUMMARY ? unescapeText(c.SUMMARY.value) : "";
+      const title = cleanTitle(rawTitle);
+      const cats = c.CATEGORIES;
+      const status = (c.STATUS && /CANCELLED/i.test(c.STATUS.value)) || /(entfällt|entfallen|abgesagt|fällt aus|cancell?ed|storniert)/i.test(rawTitle) ? "cancelled" : "";
+      let who = "";
+      if (c.ORGANIZER && c.ORGANIZER.params.CN) who = c.ORGANIZER.params.CN;
+      const base = {
+        t: title,
+        loc: c.LOCATION ? unescapeText(c.LOCATION.value).trim() : "",
+        desc: c.DESCRIPTION ? unescapeText(c.DESCRIPTION.value).trim().slice(0, 700) : "",
+        k: courseKey(title),
+        ty: courseType(title, cats)
+      };
+      if (sp.allDay) base.ad = 1;
+      if (status) base.st = status;
+      if (EXAM_RE.test(title) || cats.some(x => EXAM_RE.test(x))) base.ex = 1;
+      if (who) base.who = who;
+      if (c.URL && /^https?:/i.test(c.URL.value)) base.url = c.URL.value.trim();
+      const u = c.UID ? c.UID.value.trim() : ("h" + hashStr(rawTitle + c.DTSTART.value));
+      const pushOne = (s, id) => out.push(Object.assign({ id, s, e: s + dur }, base));
+      if (c["RECURRENCE-ID"]) {
+        const rp = parseDate(c["RECURRENCE-ID"].value, c["RECURRENCE-ID"].params);
+        if (startMs + dur >= winStart && startMs <= winEnd) pushOne(startMs, u + "@" + (rp ? toMs(rp) : startMs));
+        continue;
+      }
+      if (c.RRULE || c.RDATE.length) {
+        const asStart = p => p.allDay && !sp.allDay ? Object.assign({}, sp, { y: p.y, m: p.m, d: p.d }) : (!p.allDay && !p.tz ? Object.assign({}, p, { tz: sp.tz }) : p);
+        const ex = new Set(c.EXDATE.map(x => { const p = parseDate(x.value, x.params); return p ? toMs(asStart(p)) : NaN; }));
+        const ov = overrides[u] || new Set();
+        let starts = c.RRULE ? expandRule(sp, c.RRULE.value, winStart - dur, winEnd) : [];
+        if (!c.RRULE && startMs + dur >= winStart && startMs <= winEnd) starts.push(startMs);
+        for (const x of c.RDATE) { const p = parseDate(x.value, x.params); if (p) { const ms = toMs(asStart(p)); if (ms >= winStart - dur && ms <= winEnd) starts.push(ms); } }
+        starts = [...new Set(starts)].sort((a, b) => a - b).slice(0, 1500);
+        for (const s of starts) if (!ex.has(s) && !ov.has(s) && s + dur >= winStart) pushOne(s, u + "@" + s);
+        continue;
+      }
+      if (startMs + dur < winStart || startMs > winEnd) continue;
+      seen[u] = (seen[u] || 0) + 1;
+      pushOne(startMs, seen[u] > 1 ? u + "#" + seen[u] : u);
+    }
+    out.sort((a, b) => a.s - b.s);
+    return { events: out, calName };
+  }
+
+  /* Export als .ics (für Apple/Google Kalender) */
+  function icsEscape(s) { return String(s || "").replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/([,;])/g, "\\$1"); }
+  function fold(line) {
+    const out = []; let s = line;
+    while (s.length > 74) { out.push(s.slice(0, 74)); s = " " + s.slice(74); }
+    out.push(s);
+    return out.join("\r\n");
+  }
+  function utcStamp(ms) { const d = new Date(ms); return d.getUTCFullYear() + pad(d.getUTCMonth() + 1) + pad(d.getUTCDate()) + "T" + pad(d.getUTCHours()) + pad(d.getUTCMinutes()) + pad(d.getUTCSeconds()) + "Z"; }
+  function localDate(ms) { const d = new Date(ms); return d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()); }
+  function build(items, name) {
+    const L = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Mein Uni-Kalender//DE", "CALSCALE:GREGORIAN", "X-WR-CALNAME:" + icsEscape(name || "Mein Uni-Kalender")];
+    const stamp = utcStamp(Date.now());
+    for (const it of items) {
+      L.push("BEGIN:VEVENT", "UID:" + icsEscape(it.id) + "@uni-kalender", "DTSTAMP:" + stamp);
+      if (it.ad) { L.push("DTSTART;VALUE=DATE:" + localDate(it.s), "DTEND;VALUE=DATE:" + localDate(Math.max(it.e, it.s + DAY))); }
+      else { L.push("DTSTART:" + utcStamp(it.s), "DTEND:" + utcStamp(it.e)); }
+      L.push("SUMMARY:" + icsEscape(it.t));
+      if (it.loc) L.push("LOCATION:" + icsEscape(it.loc));
+      if (it.note || it.desc) L.push("DESCRIPTION:" + icsEscape([it.note, it.desc].filter(Boolean).join("\n\n")));
+      if (it.st === "cancelled") L.push("STATUS:CANCELLED");
+      L.push("END:VEVENT");
+    }
+    L.push("END:VCALENDAR");
+    return L.map(fold).join("\r\n") + "\r\n";
+  }
+
+  return { parse, build, parseDate, toMs, expandRule, cleanTitle, courseType, courseKey };
+})();
+// ICS-END
+
+/* =====================================================================
+   3. Speicher: claude.ai-Konto (wenn als Artifact geöffnet) oder Browser
+   ===================================================================== */
+const LS = "unikal.";
+const lsGet = k => { try { const t = localStorage.getItem(LS + k); return t ? JSON.parse(t) : null; } catch (e) { return null; } };
+const lsSet = (k, v) => { try { localStorage.setItem(LS + k, JSON.stringify(v)); return true; } catch (e) { return false; } };
+const lsDel = k => { try { localStorage.removeItem(LS + k); } catch (e) { /* egal */ } };
+
+function freshState() {
+  return {
+    v: 1, savedAt: 0,
+    sources: [],   // {id, name, url, kind:'url'|'file', lastSync, lastError, count}
+    events: {},    // sourceId → [termin]
+    own: [],       // eigene Termine
+    tasks: [],     // Aufgaben
+    courses: {},   // kursKey → {color, hidden}
+    notes: {},     // terminId → Notiz
+    hidden: {},    // terminId → 1 (einzeln ausgeblendet)
+    changes: {},   // terminId → {k:'neu'|'geaendert', at, prev}
+    settings: { dayStart: 8, dayEnd: 19, weekend: "auto", proxy: "", demoOff: false }
+  };
+}
+function normalizeState(s) {
+  const f = freshState();
+  const out = Object.assign(f, s || {});
+  out.settings = Object.assign(freshState().settings, (s && s.settings) || {});
+  for (const k of ["events", "courses", "notes", "hidden", "changes"]) if (!out[k] || typeof out[k] !== "object") out[k] = {};
+  for (const k of ["sources", "own", "tasks"]) if (!Array.isArray(out[k])) out[k] = [];
+  return out;
+}
+
+const Store = {
+  cloud: null,        // {db, uid}
+  mode: "local",
+  dirty: new Set(),
+  timer: null,
+  flushing: false,
+  parts: {},          // Name → Anzahl Teil-Dokumente in der Cloud
+  loadLocal() {
+    const meta = lsGet("meta");
+    const st = normalizeState(meta);
+    for (const src of st.sources) st.events[src.id] = lsGet("src." + src.id) || [];
+    return st;
+  },
+  metaDoc(st) { const { events, ...rest } = st; return rest; },
+  save(name) {
+    if (name === "meta") state.savedAt = Date.now();
+    const val = name === "meta" ? this.metaDoc(state) : (state.events[name.slice(4)] || []);
+    lsSet(name, val);
+    if (this.cloud) { this.dirty.delete("-" + name); this.dirty.add(name); this.schedule(); }
+  },
+  remove(name) {
+    lsDel(name);
+    if (this.cloud) { this.dirty.delete(name); this.dirty.add("-" + name); this.schedule(); }
+  },
+  schedule() { clearTimeout(this.timer); this.timer = setTimeout(() => this.flush(), 700); },
+  async flush() {
+    if (this.flushing || !this.cloud) return;
+    this.flushing = true;
+    try {
+      while (this.dirty.size) {
+        const name = this.dirty.values().next().value;
+        this.dirty.delete(name);
+        try {
+          if (name.startsWith("-")) await this.cloudDelete(name.slice(1));
+          else await this.cloudWrite(name, name === "meta" ? this.metaDoc(state) : (state.events[name.slice(4)] || []));
+        } catch (e) {
+          if (e && e.code === "quota_exceeded") toast("Der Speicher im claude.ai-Konto ist voll. Entferne alte Quellen.");
+          else if (e && (e.code === "unavailable" || e.code === "resource_exhausted")) { this.dirty.add(name); setTimeout(() => this.flush(), 4000); break; }
+        }
+      }
+    } finally { this.flushing = false; }
+  },
+  ref(name) { return this.cloud.db.doc("data/users/" + this.cloud.uid + "/" + name); },
+  async cloudWrite(name, val) {
+    const json = JSON.stringify(val);
+    const CH = 90000;
+    const chunks = [];
+    for (let i = 0; i < json.length; i += CH) chunks.push(json.slice(i, i + CH));
+    if (!chunks.length) chunks.push("null");
+    for (let i = 1; i < chunks.length; i++) await this.ref(name + ".p" + i).set({ c: chunks[i] });
+    await this.ref(name).set({ n: chunks.length, c: chunks[0], at: Date.now() });
+    const old = this.parts[name] || 1;
+    for (let i = chunks.length; i < old; i++) await this.ref(name + ".p" + i).delete();
+    this.parts[name] = chunks.length;
+  },
+  async cloudRead(name) {
+    const snap = await this.ref(name).get();
+    if (!snap.exists) return undefined;
+    const d = snap.data();
+    let json = d.c || "";
+    for (let i = 1; i < (d.n || 1); i++) {
+      const p = await this.ref(name + ".p" + i).get();
+      json += p.exists ? p.data().c : "";
+    }
+    this.parts[name] = d.n || 1;
+    try { return JSON.parse(json); } catch (e) { return undefined; }
+  },
+  async cloudDelete(name) {
+    const n = this.parts[name] || 1;
+    for (let i = 1; i < n; i++) await this.ref(name + ".p" + i).delete();
+    await this.ref(name).delete();
+    delete this.parts[name];
+  },
+  hasData(st) { return st.sources.length || st.own.length || st.tasks.length; },
+  async connect() {
+    if (!window.claude || typeof window.claude.use !== "function") return;
+    let db = null, user = null;
+    try { [db, user] = await Promise.all([window.claude.use("db"), window.claude.use("user")]); } catch (e) { return; }
+    if (!db || !user) return;
+    let id = null;
+    try { id = await user.id(); } catch (e) { /* kein Konto */ }
+    if (!id) return;
+    this.cloud = { db, uid: id };
+    this.mode = "cloud";
+    try {
+      const meta = await this.cloudRead("meta");
+      if (meta && (!this.hasData(state) || (meta.savedAt || 0) >= (state.savedAt || 0))) {
+        const st = normalizeState(meta);
+        for (const src of st.sources) st.events[src.id] = (await this.cloudRead("src." + src.id)) || [];
+        state = st;
+        lsSet("meta", this.metaDoc(state));
+        for (const src of state.sources) lsSet("src." + src.id, state.events[src.id]);
+        afterLoad();
+      } else if (this.hasData(state)) {
+        this.dirty.add("meta");
+        for (const src of state.sources) this.dirty.add("src." + src.id);
+        this.flush();
+      }
+    } catch (e) {
+      if (e && (e.code === "not_granted" || e.code === "revoked" || e.code === "capability_disabled")) { this.cloud = null; this.mode = "local"; }
+    }
+    render();
+  },
+  async refreshFromCloud() {
+    if (!this.cloud || this.dirty.size || this.flushing) return;
+    try {
+      const snap = await this.ref("meta").get();
+      if (!snap.exists) return;
+      const at = snap.data().at || 0;
+      if (at <= (state.savedAt || 0) + 1000) return;
+      const meta = await this.cloudRead("meta");
+      if (!meta || (meta.savedAt || 0) <= (state.savedAt || 0)) return;
+      const st = normalizeState(meta);
+      for (const src of st.sources) st.events[src.id] = (await this.cloudRead("src." + src.id)) || [];
+      state = st;
+      afterLoad();
+      render();
+    } catch (e) { /* nächstes Mal */ }
+  }
+};
+
+let state = Store.loadLocal();
+const inArtifact = !!(window.claude && typeof window.claude.use === "function");
+
+/* =====================================================================
+   4. Abgeleitete Daten: Kurse, Termine im Zeitraum
+   ===================================================================== */
+const ui = Object.assign({ tab: "cal", view: window.matchMedia("(min-width: 860px)").matches ? "week" : "day" }, lsGet("ui") || {});
+ui.cursor = startOfDay(Date.now());
+ui.openCourse = null;
+ui.confirmWipe = false;
+let demo = null;
+
+function demoActive() { return !Store.hasData(state) && !state.settings.demoOff; }
+
+/* Beispiel-Stundenplan relativ zur aktuellen Woche (wird nie gespeichert) */
+function buildDemo() {
+  const mon = startOfWeek(Date.now());
+  const at = (week, wd, h, m) => { const d = new Date(addDays(mon, week * 7 + wd)); d.setHours(h, m, 0, 0); return d.getTime(); };
+  const plan = [
+    [0, 8, 15, 90, "Analysis 1 VO", "HS A, Hauptgebäude"],
+    [0, 10, 15, 90, "Grundlagen der Programmierung VU", "PC-Raum 2, Inffeldgasse"],
+    [1, 9, 0, 90, "Lineare Algebra VO", "HS B, Hauptgebäude"],
+    [1, 12, 0, 90, "Analysis 1 UE", "SR 15.04, Gruppe 3"],
+    [2, 10, 15, 90, "Analysis 1 VO", "HS A, Hauptgebäude"],
+    [2, 14, 0, 90, "Grundlagen der Programmierung VU", "PC-Raum 2, Inffeldgasse"],
+    [3, 8, 15, 90, "Lineare Algebra UE", "SR 2, Neue Technik"],
+    [3, 13, 0, 90, "Wissenschaftliches Arbeiten SE", "SE-Raum 1"],
+    [4, 10, 0, 90, "Lineare Algebra VO", "HS B, Hauptgebäude"]
+  ];
+  const ev = [];
+  for (let w = -1; w <= 4; w++) {
+    for (const [wd, h, m, dur, t, loc] of plan) {
+      const s = at(w, wd, h, m);
+      const e = { id: "demo-" + w + "-" + wd + "-" + h, t, loc, s, e: s + dur * 60000, k: ICS.courseKey(t), ty: ICS.courseType(t), src: "demo" };
+      if (w === 0 && wd === 2 && h === 10) e.st = "cancelled";
+      if (w === 0 && wd === 2 && h === 14) { e.chg = { k: "geaendert", prev: { s: e.s, e: e.e, loc: "HS i7, Inffeldgasse" } }; }
+      ev.push(e);
+    }
+  }
+  const ex = at(1, 3, 16, 0);
+  ev.push({ id: "demo-exam", t: "Zwischentest Analysis 1", loc: "HS A, Hauptgebäude", s: ex, e: ex + 90 * 60000, k: "zwischentest analysis 1", ty: "", ex: 1, src: "demo" });
+  const tasks = [
+    { id: "demo-t1", t: "Übungsblatt 4 hochladen", due: dateKey(addDays(mon, 3)), k: "analysis 1 ue", done: 0, demo: 1 },
+    { id: "demo-t2", t: "Literaturliste für das Seminar", due: dateKey(addDays(mon, 7)), k: "wissenschaftliches arbeiten se", done: 0, demo: 1 }
+  ];
+  return { events: ev, tasks };
+}
+function getDemo() { if (!demo || demo.week !== startOfWeek(Date.now())) { demo = buildDemo(); demo.week = startOfWeek(Date.now()); } return demo; }
+
+function allFeedEvents() {
+  if (demoActive()) return getDemo().events;
+  const out = [];
+  for (const src of state.sources) for (const e of (state.events[src.id] || [])) out.push(e);
+  return out;
+}
+function allTasks() { return demoActive() ? getDemo().tasks : state.tasks; }
+
+function courseInfo(k) { return state.courses[k] || {}; }
+const safeColor = (c, fb) => /^#[0-9a-f]{6}$/i.test(c || "") ? c : fb;
+function courseColor(k) { const c = state.courses[k]; return safeColor(c && c.color, PALETTE[hashStr(k || "x") % PALETTE.length]); }
+function assignColors(keys) {
+  const used = {};
+  for (const k in state.courses) if (state.courses[k].color) used[state.courses[k].color] = (used[state.courses[k].color] || 0) + 1;
+  for (const k of keys) {
+    if (state.courses[k] && state.courses[k].color) continue;
+    let best = PALETTE[0], bestN = Infinity;
+    for (const c of PALETTE) { const n = used[c] || 0; if (n < bestN) { best = c; bestN = n; } }
+    state.courses[k] = Object.assign({}, state.courses[k], { color: best });
+    used[best] = (used[best] || 0) + 1;
+  }
+}
+
+function courseList() {
+  const map = {};
+  const now = Date.now();
+  for (const e of allFeedEvents()) {
+    const c = map[e.k] || (map[e.k] = { k: e.k, name: e.t, ty: e.ty, count: 0, next: null, exam: !!e.ex });
+    c.count++;
+    if (e.s >= now && !e.st && (c.next === null || e.s < c.next)) c.next = e.s;
+  }
+  return Object.values(map).sort((a, b) => a.name.localeCompare(b.name, "de"));
+}
+
+function ownOccurrences(from, to) {
+  const out = [];
+  for (const o of state.own) {
+    const dur = o.e - o.s;
+    if (o.rep === "weekly") {
+      const until = o.until || (o.s + 365 * DAY);
+      for (let s = o.s, i = 0; s <= until && s <= to && i < 600; i++, s = addDays(o.s, 7 * i)) {
+        if (s + dur >= from) out.push(Object.assign({}, o, { id: o.id + "@" + i, base: o.id, s, e: s + dur }));
+      }
+    } else if (o.e >= from && o.s <= to) out.push(Object.assign({}, o, { base: o.id }));
+  }
+  return out;
+}
+
+const KIND_LABEL = { termin: "Termin", pruefung: "Prüfung", lernen: "Lerngruppe", abgabe: "Abgabe" };
+const OWN_COLOR = "#5B7083";
+
+/* Alle sichtbaren Einträge in [from, to] */
+function itemsBetween(from, to, opts) {
+  opts = opts || {};
+  const items = [];
+  for (const e of allFeedEvents()) {
+    if (e.e < from || e.s > to) continue;
+    if (!opts.includeHidden && (state.hidden[e.id] || courseInfo(e.k).hidden)) continue;
+    items.push({
+      id: e.id, src: "feed", t: e.t, s: e.s, e: Math.max(e.e, e.s), ad: !!e.ad, loc: e.loc || "", desc: e.desc || "", who: e.who || "", url: e.url || "",
+      k: e.k, ty: e.ty, ex: !!e.ex, st: e.st || "", c: courseColor(e.k), note: state.notes[e.id] || "", chg: e.chg || state.changes[e.id] || null, raw: e
+    });
+  }
+  for (const o of ownOccurrences(from, to)) {
+    if (state.hidden[o.id]) continue;
+    items.push({ id: o.id, base: o.base, src: "own", t: o.t, s: o.s, e: o.e, ad: !!o.ad, loc: o.loc || "", desc: "", k: null, ty: KIND_LABEL[o.kind] || "Termin", ex: o.kind === "pruefung", st: "", c: safeColor(o.color, OWN_COLOR), note: o.notes || "", chg: null, raw: o });
+  }
+  if (!opts.noTasks) {
+    for (const t of allTasks()) {
+      if (!t.due || t.done) continue;
+      const s = fromKey(t.due);
+      if (s + DAY <= from || s > to) continue;
+      items.push({ id: "task-" + t.id, src: "task", t: t.t, s, e: s + DAY, ad: true, loc: "", k: t.k, ty: "Aufgabe", ex: false, st: "", c: t.k ? courseColor(t.k) : OWN_COLOR, note: "", chg: null, raw: t });
+    }
+  }
+  items.sort((a, b) => (startOfDay(a.s) - startOfDay(b.s)) || (b.ad - a.ad) || a.s - b.s || a.t.localeCompare(b.t));
+  return items;
+}
+
+/* =====================================================================
+   5. Quellen laden (Abo-Link) und Dateien importieren
+   ===================================================================== */
+function applyImport(src, text) {
+  if (!/BEGIN:VCALENDAR/i.test(text)) throw new Error("Das ist keine Kalenderdatei (iCal/.ics).");
+  const parsed = ICS.parse(text);
+  const fresh = parsed.events;
+  const old = state.events[src.id] || [];
+  const hadBefore = !!src.lastSync && old.length > 0;
+  const oldMap = new Map(old.map(e => [e.id, e]));
+  const now = Date.now();
+  let nNew = 0, nChg = 0;
+  const pendingNew = [];
+  for (const e of fresh) {
+    const o = oldMap.get(e.id);
+    if (!o) { if (hadBefore && e.s > now) pendingNew.push(e.id); continue; }
+    if (o.s !== e.s || o.e !== e.e || (o.loc || "") !== (e.loc || "") || (o.st || "") !== (e.st || "")) {
+      if (e.s > now - DAY) { state.changes[e.id] = { k: e.st && !o.st ? "entfaellt" : "geaendert", at: now, prev: { s: o.s, e: o.e, loc: o.loc || "" } }; nChg++; }
+    }
+  }
+  // Wenn fast alles „neu" ist, hat die Quelle nur ihre Kennungen geändert – dann nicht markieren.
+  if (pendingNew.length && pendingNew.length < fresh.length * 0.5) for (const id of pendingNew) { state.changes[id] = { k: "neu", at: now }; nNew++; }
+  state.events[src.id] = fresh;
+  src.count = fresh.length;
+  src.lastSync = now;
+  src.lastError = "";
+  if (parsed.calName && (!src.name || src.autoName)) { src.name = parsed.calName; src.autoName = true; }
+  assignColors([...new Set(fresh.map(e => e.k))]);
+  Store.save("src." + src.id);
+  Store.save("meta");
+  return { count: fresh.length, nNew, nChg };
+}
+
+async function fetchIcs(url) {
+  url = url.trim().replace(/^webcal:\/\//i, "https://");
+  if (!/^https?:\/\//i.test(url)) throw new Error("Der Link muss mit https:// oder webcal:// beginnen.");
+  const tries = [url];
+  const px = (state.settings.proxy || "").trim();
+  if (px) tries.push(px.includes("{url}") ? px.replace("{url}", encodeURIComponent(url)) : px + encodeURIComponent(url));
+  let lastErr = null;
+  for (const u of tries) {
+    try {
+      const res = await fetch(u, { cache: "no-store", credentials: "omit" });
+      if (!res.ok) { lastErr = new Error("Der Server antwortet mit Fehler " + res.status + ". Ist der Link noch gültig?"); continue; }
+      const text = await res.text();
+      if (!/BEGIN:VCALENDAR/i.test(text)) { lastErr = new Error("Unter dem Link liegt kein Kalender. Prüfe, ob du den iCal-Link kopiert hast."); continue; }
+      return text;
+    } catch (e) {
+      lastErr = null;
+    }
+  }
+  if (lastErr) throw lastErr;
+  if (inArtifact) throw new Error("In der claude.ai-Ansicht darf die Seite keine fremden Adressen laden. Lade die .ics-Datei herunter und importiere sie mit „Datei importieren“.");
+  throw new Error(px ? "Auch über den Proxy kam nichts an. Prüfe die Proxy-Adresse oder importiere die .ics-Datei." : "Der Uni-Server lässt das direkte Laden im Browser nicht zu. Importiere die .ics-Datei oder trage unter „Erweitert“ einen Proxy ein.");
+}
+
+const syncing = new Set();
+async function syncSource(src, quiet) {
+  if (src.kind !== "url" || syncing.has(src.id)) return;
+  syncing.add(src.id);
+  render();
+  try {
+    const text = await fetchIcs(src.url);
+    const r = applyImport(src, text);
+    if (!quiet || r.nNew || r.nChg) toast(src.name + ": " + r.count + " Termine" + (r.nChg ? ", " + r.nChg + " geändert" : "") + (r.nNew ? ", " + r.nNew + " neu" : ""));
+  } catch (e) {
+    src.lastError = e.message || String(e);
+    src.lastTry = Date.now();
+    Store.save("meta");
+    if (!quiet) toast(src.lastError);
+  } finally {
+    syncing.delete(src.id);
+    render();
+  }
+}
+function autoSync() {
+  for (const src of state.sources) {
+    if (src.kind === "url" && Date.now() - Math.max(src.lastSync || 0, src.lastTry || 0) > 30 * 60000) syncSource(src, true);
+  }
+}
+
+function importFiles(files, targetId) {
+  const list = [...files];
+  if (!list.length) return;
+  let done = 0;
+  for (const f of list) {
+    const rd = new FileReader();
+    rd.onload = () => {
+      const text = String(rd.result || "");
+      if (/^\s*\{/.test(text) && /"sources"/.test(text)) { importBackup(text); return; }
+      let src = targetId ? state.sources.find(s => s.id === targetId) : null;
+      const isNew = !src;
+      if (!src) src = { id: uid(), name: f.name.replace(/\.(ics|ical|ifb|icalendar|txt)$/i, ""), kind: "file", lastSync: 0, count: 0, autoName: true };
+      try {
+        if (isNew) state.sources.push(src);
+        const r = applyImport(src, text);
+        toast((isNew ? "Importiert: " : "Aktualisiert: ") + src.name + " (" + r.count + " Termine" + (r.nChg ? ", " + r.nChg + " geändert" : "") + ")");
+      } catch (e) {
+        if (isNew) state.sources = state.sources.filter(s => s !== src);
+        toast(f.name + ": " + (e.message || "Datei konnte nicht gelesen werden."));
+      }
+      if (++done === list.length) render();
+    };
+    rd.onerror = () => toast(f.name + " konnte nicht gelesen werden.");
+    rd.readAsText(f);
+  }
+}
+
+/* =====================================================================
+   6. Sichern, Wiederherstellen, Exportieren
+   ===================================================================== */
+async function saveFile(filename, text, mime) {
+  if (inArtifact) {
+    let dl = null;
+    try { dl = await window.claude.use("downloads"); } catch (e) { dl = null; }
+    if (!dl) { toast("Speichern ist in dieser Ansicht nicht möglich."); return; }
+    try { await dl.save({ filename, data: text }); toast("Gespeichert: " + filename); }
+    catch (e) { if (e && e.code !== "declined") toast("Speichern hat nicht geklappt (" + (e.code || "Fehler") + ")."); }
+    return;
+  }
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([text], { type: mime }));
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+}
+function exportBackup() {
+  const data = JSON.stringify(Object.assign({ app: "mein-uni-kalender", exportedAt: new Date().toISOString() }, state));
+  saveFile("uni-kalender-sicherung-" + dateKey(Date.now()) + ".json", data, "application/json");
+}
+function importBackup(text) {
+  try {
+    const obj = JSON.parse(text);
+    if (!obj || !Array.isArray(obj.sources)) throw new Error();
+    const old = state.sources.map(s => s.id);
+    delete obj.app; delete obj.exportedAt;
+    state = normalizeState(obj);
+    for (const id of old) if (!state.sources.some(s => s.id === id)) Store.remove("src." + id);
+    for (const src of state.sources) Store.save("src." + src.id);
+    Store.save("meta");
+    afterLoad();
+    toast("Sicherung wiederhergestellt.");
+    render();
+  } catch (e) { toast("Diese Datei ist keine gültige Sicherung."); }
+}
+function exportIcs() {
+  const from = Date.now() - 60 * DAY, to = Date.now() + 365 * DAY;
+  const items = itemsBetween(from, to, { noTasks: true }).filter(i => i.st !== "cancelled");
+  saveFile("uni-kalender.ics", ICS.build(items, "Mein Uni-Kalender"), "text/calendar");
+}
+
+/* =====================================================================
+   7. Darstellung
+   ===================================================================== */
+const ICON = {
+  left: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>',
+  right: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>',
+  plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',
+  clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  pin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/></svg>',
+  person: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>',
+  text: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg>',
+  alert: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17.5v.5"/></svg>',
+  check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg>',
+  trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>',
+  link: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>'
+};
+
+function badgesFor(it, full) {
+  const b = [];
+  if (it.ty && it.src !== "task") b.push('<span class="badge type" style="--c:' + it.c + '">' + esc(it.ty) + "</span>");
+  if (it.ex) b.push('<span class="badge exam">Prüfung</span>');
+  if (it.st === "cancelled") b.push('<span class="badge off">Entfällt</span>');
+  if (it.chg && it.chg.k === "geaendert") b.push('<span class="badge chg">Geändert</span>');
+  if (it.chg && it.chg.k === "neu") b.push('<span class="badge new">Neu</span>');
+  if (full && it.note) b.push('<span class="badge off">Notiz</span>');
+  return b.join("");
+}
+function mapsUrl(loc) {
+  const q = encodeURIComponent(loc);
+  return /iPhone|iPad|Macintosh/.test(navigator.userAgent) ? "https://maps.apple.com/?q=" + q : "https://www.google.com/maps/search/?api=1&query=" + q;
+}
+
+function nextUp() {
+  const now = Date.now();
+  const items = itemsBetween(now - 4 * 3600000, now + 3 * DAY, { noTasks: true }).filter(i => !i.ad && i.st !== "cancelled" && i.e > now);
+  const cur = items.find(i => i.s <= now);
+  const nxt = items.find(i => i.s > now);
+  return { cur, nxt };
+}
+function nextLineHtml() {
+  const { cur, nxt } = nextUp();
+  const parts = [];
+  if (cur) parts.push('<div class="next-line"><span class="lbl">Jetzt</span><span class="txt">' + esc(cur.t) + (cur.loc ? " · " + esc(cur.loc) : "") + ' · bis <span class="num">' + hm(cur.e) + "</span></span></div>");
+  if (nxt) {
+    const mins = Math.round((nxt.s - Date.now()) / 60000);
+    const when = mins < 60 ? "in " + mins + " Min." : (relDay(nxt.s) || dShort(nxt.s)) + " " + hm(nxt.s);
+    parts.push('<div class="next-line"><span class="lbl">Als Nächstes</span><span class="txt"><span class="num">' + esc(when) + "</span> · " + esc(nxt.t) + (nxt.loc ? " · " + esc(nxt.loc) : "") + "</span></div>");
+  }
+  return parts.join("");
+}
+
+function render() {
+  const view = document.getElementById("view");
+  const prevScroll = view.querySelector(".scroller");
+  const keep = prevScroll ? { tab: view.dataset.tab, key: view.dataset.key, top: prevScroll.scrollTop } : null;
+  for (const t of document.querySelectorAll(".tab")) t.setAttribute("aria-current", t.dataset.tab === ui.tab ? "page" : "false");
+  document.getElementById("brand-sem").textContent = semesterLabel(Date.now()) + " · KW " + isoWeek(Date.now());
+  const side = document.getElementById("side-next");
+  const nl = nextLineHtml();
+  side.hidden = !nl;
+  side.innerHTML = nl.replace(/next-line/g, "next-line side");
+  let html = "";
+  if (ui.tab === "cal") html = renderCal();
+  else if (ui.tab === "tasks") html = renderTasks();
+  else if (ui.tab === "courses") html = renderCourses();
+  else html = renderSources();
+  view.innerHTML = html;
+  view.dataset.tab = ui.tab;
+  view.dataset.key = ui.tab === "cal" ? ui.view + ":" + ui.cursor : ui.tab;
+  const sc = view.querySelector(".scroller");
+  if (sc) {
+    if (keep && keep.tab === view.dataset.tab && keep.key === view.dataset.key) sc.scrollTop = keep.top;
+    else if (ui.tab === "cal" && ui.view !== "list") scrollToTime(sc);
+  }
+}
+
+function scrollToTime(sc) {
+  const grid = sc.querySelector(".cal-body");
+  if (!grid) return;
+  const startH = +grid.dataset.start;
+  const hourPx = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--hour")) || 54;
+  let target = state.settings.dayStart;
+  const now = new Date();
+  const range = +grid.dataset.from, rangeEnd = +grid.dataset.to;
+  if (Date.now() >= range && Date.now() < rangeEnd) target = Math.max(startH, now.getHours() - 1);
+  else if (grid.dataset.first) target = Math.max(startH, +grid.dataset.first - 1);
+  sc.scrollTop = Math.max(0, (target - startH) * hourPx);
+}
+
+/* ----- Kalender ----- */
+function visibleDays() {
+  if (ui.view === "day") return [ui.cursor];
+  const mon = startOfWeek(ui.cursor);
+  const days = [0, 1, 2, 3, 4].map(i => addDays(mon, i));
+  const wkMode = state.settings.weekend;
+  let showWe = wkMode === "always";
+  if (wkMode === "auto") showWe = itemsBetween(addDays(mon, 5), addDays(mon, 7) - 1).length > 0;
+  if (showWe) days.push(addDays(mon, 5), addDays(mon, 6));
+  return days;
+}
+
+function renderCal() {
+  const today = startOfDay(Date.now());
+  const cur = ui.cursor;
+  const d = new Date(cur);
+  let title = MONTHS[d.getMonth()] + " " + d.getFullYear();
+  if (ui.view === "day") title = (relDay(cur) ? relDay(cur) + ", " : WD_SHORT[d.getDay()] + ", ") + d.getDate() + ". " + MONTHS[d.getMonth()];
+  const sub = "KW " + isoWeek(cur) + " · " + semesterLabel(cur);
+  let h = '<header class="top">';
+  h += '<div class="top-row"><div class="title-wrap"><h1>' + esc(title) + '</h1><div class="sub num">' + esc(sub) + '</div><input type="date" id="jump" aria-label="Datum wählen" value="' + dateKey(cur) + '"></div>';
+  const atToday = ui.view === "week" ? startOfWeek(cur) === startOfWeek(today) : startOfDay(cur) === today;
+  h += '<button class="btn small" data-act="today"' + (atToday ? " disabled" : "") + '>Heute</button>';
+  h += '<button class="btn icon" data-act="prev" aria-label="Zurück">' + ICON.left + '</button><button class="btn icon" data-act="next" aria-label="Weiter">' + ICON.right + "</button></div>";
+  h += '<div class="top-row"><div class="seg" role="group" aria-label="Ansicht">';
+  for (const [v, l] of [["day", "Tag"], ["week", "Woche"], ["list", "Liste"]]) h += '<button data-act="view" data-v="' + v + '" aria-pressed="' + (ui.view === v) + '">' + l + "</button>";
+  h += "</div></div>";
+  if (ui.view !== "week") h += renderStrip();
+  const nl = nextLineHtml();
+  if (nl && ui.view !== "list") h += '<div class="nl-wrap">' + nl + "</div>";
+  h += "</header>";
+  if (demoActive()) h += '<div class="banner"><p><b>Beispiel-Stundenplan.</b> So sieht dein Semester aus, sobald du deinen Kalender aus dem Uni-System importierst.</p><button class="btn small primary" data-act="goto" data-tab="sources">Eigenen Kalender holen</button><button class="btn small" data-act="demo-off">Ausblenden</button></div>';
+  h += '<div class="view-wrap"><div class="scroller" id="scroller">';
+  h += ui.view === "list" ? renderList() : renderGrid();
+  h += '</div><button class="fab" data-act="new-event" aria-label="Neuer Termin">' + ICON.plus + "</button></div>";
+  return h;
+}
+
+function renderStrip() {
+  const mon = startOfWeek(ui.cursor);
+  const today = startOfDay(Date.now());
+  const items = itemsBetween(mon, addDays(mon, 7) - 1);
+  let h = '<div class="strip">';
+  for (let i = 0; i < 7; i++) {
+    const day = addDays(mon, i), end = addDays(day, 1);
+    const di = items.filter(it => it.s < end && it.e > day && it.st !== "cancelled");
+    const cols = [...new Set(di.map(x => x.c))].slice(0, 3);
+    const cls = (day === today ? "today " : "") + (day === startOfDay(ui.cursor) ? "sel" : "");
+    h += '<button class="' + cls + '" data-act="pick" data-d="' + day + '" aria-label="' + esc(dLong(day)) + '"><span class="wd">' + WD_SHORT[new Date(day).getDay()] + '</span><span class="dn">' + new Date(day).getDate() + '</span><span class="dots">' + cols.map(c => '<i style="--c:' + c + '"></i>').join("") + "</span></button>";
+  }
+  return h + "</div>";
+}
+
+function layoutDay(segs) {
+  segs.sort((a, b) => a.s - b.s || b.e - a.e);
+  let cluster = [], end = -Infinity;
+  const finish = () => {
+    const cols = [];
+    for (const s of cluster) {
+      let i = cols.findIndex(e => e <= s.s);
+      if (i < 0) { i = cols.length; cols.push(0); }
+      cols[i] = s.e; s.x = i;
+    }
+    for (const s of cluster) s.n = cols.length;
+  };
+  for (const s of segs) {
+    if (s.s >= end && cluster.length) { finish(); cluster = []; end = -Infinity; }
+    cluster.push(s); end = Math.max(end, s.e);
+  }
+  if (cluster.length) finish();
+  return segs;
+}
+
+function renderGrid() {
+  const days = visibleDays();
+  const from = days[0], to = addDays(days[days.length - 1], 1) - 1;
+  const items = itemsBetween(from, to);
+  const timed = items.filter(i => !i.ad);
+  const allday = items.filter(i => i.ad);
+  let startH = state.settings.dayStart, endH = state.settings.dayEnd;
+  let firstH = null;
+  for (const it of timed) {
+    const sd = new Date(Math.max(it.s, from)), ed = new Date(Math.min(it.e, to));
+    if (startOfDay(it.s) >= from) { startH = Math.min(startH, sd.getHours()); if (firstH === null || sd.getHours() < firstH) firstH = sd.getHours(); }
+    if (startOfDay(it.e - 1) <= to) endH = Math.max(endH, ed.getHours() + (ed.getMinutes() ? 1 : 0));
+  }
+  startH = Math.max(0, startH); endH = Math.min(24, Math.max(endH, startH + 4));
+  const hourPx = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--hour")) || 54;
+  const today = startOfDay(Date.now());
+  const n = days.length;
+  let h = '<div class="cal" style="--days:' + n + '">';
+  if (n > 1) {
+    h += '<div class="cal-head"><div></div>';
+    for (const day of days) {
+      const dd = new Date(day);
+      h += '<button class="dh' + (day === today ? " today" : "") + '" data-act="pick-day" data-d="' + day + '">' + WD_SHORT[dd.getDay()] + "<b>" + dd.getDate() + "</b></button>";
+    }
+    h += "</div>";
+  }
+  if (allday.length) {
+    h += '<div class="allday"><div class="gl">ganztags</div>';
+    for (const day of days) {
+      const end = addDays(day, 1);
+      const di = allday.filter(it => it.s < end && it.e > day);
+      h += '<div class="ac">' + di.map(it => '<button class="chip' + (it.src === "task" ? " task" : "") + '" style="--c:' + it.c + '" data-act="open" data-id="' + esc(it.id) + '">' + (it.src === "task" ? "☐ " : "") + esc(it.t) + "</button>").join("") + "</div>";
+    }
+    h += "</div>";
+  }
+  const height = (endH - startH) * hourPx;
+  h += '<div class="cal-body" data-start="' + startH + '" data-from="' + from + '" data-to="' + to + '"' + (firstH !== null ? ' data-first="' + firstH + '"' : "") + ' style="height:' + height + 'px">';
+  h += '<div class="hours">';
+  for (let hr = startH + 1; hr < endH; hr++) h += '<span style="top:' + ((hr - startH) * hourPx) + 'px">' + pad(hr) + ":00</span>";
+  h += "</div>";
+  const now = Date.now();
+  for (const day of days) {
+    const dayEnd = addDays(day, 1);
+    const wd = new Date(day).getDay();
+    h += '<div class="col' + (day === today ? " today" : "") + (wd === 0 || wd === 6 ? " weekend" : "") + '" data-day="' + day + '">';
+    const segs = timed.filter(it => it.s < dayEnd && it.e > day || (it.s === it.e && it.s >= day && it.s < dayEnd)).map(it => ({ it, s: Math.max(it.s, day), e: Math.min(Math.max(it.e, it.s + 30 * 60000), dayEnd) }));
+    for (const sg of layoutDay(segs)) {
+      const it = sg.it;
+      const fromH = Math.max((sg.s - day) / 3600000, startH);
+      const toH = Math.min((sg.e - day) / 3600000, endH);
+      const top = (Math.min(fromH, endH - 0.4) - startH) * hourPx;
+      const ht = Math.max(22, (toH - fromH) * hourPx - 2);
+      const cls = "ev" + (it.st === "cancelled" ? " cancelled" : "") + (it.ex ? " exam" : "") + (it.e < now ? " past" : "") + (ht < 44 ? " short" : "");
+      h += '<button class="' + cls + '" style="--c:' + it.c + ";--x:" + sg.x + ";--n:" + sg.n + ";top:" + top + "px;height:" + ht + 'px" data-act="open" data-id="' + esc(it.id) + '">';
+      h += '<span class="t">' + esc(it.t) + "</span>";
+      h += '<span class="m">' + hm(it.s) + "–" + hm(it.e) + "</span>";
+      if (it.loc) h += '<span class="m loc">' + esc(it.loc) + "</span>";
+      const bg = badgesFor(it);
+      if (bg && ht >= 70) h += '<span class="tags">' + bg + "</span>";
+      h += "</button>";
+    }
+    if (day === today) {
+      const mins = (now - day) / 60000;
+      if (mins >= startH * 60 && mins <= endH * 60) h += '<div class="now" style="top:' + ((mins / 60 - startH) * hourPx) + 'px"></div>';
+    }
+    h += "</div>";
+  }
+  h += "</div>";
+  if (!items.length && !demoActive()) {
+    h += '<div class="empty"><strong>' + (n > 1 ? "Keine Termine in dieser Woche" : "Keine Termine an diesem Tag") + "</strong>" + (state.sources.length ? "" : '<span>Hol dir deinen Stundenplan aus dem Uni-System.</span><button class="btn primary" data-act="goto" data-tab="sources">Kalender importieren</button>') + "</div>";
+  }
+  return h + "</div>";
+}
+
+function renderList() {
+  const from = startOfDay(ui.cursor), to = addDays(from, 28) - 1;
+  const items = itemsBetween(from, to);
+  if (!items.length) return '<div class="list"><div class="empty"><strong>Keine Termine in den nächsten vier Wochen</strong>' + (state.sources.length ? "" : '<button class="btn primary" data-act="goto" data-tab="sources">Kalender importieren</button>') + "</div></div>";
+  let h = '<div class="list">';
+  let lastDay = null;
+  const now = Date.now();
+  for (const it of items) {
+    const day = Math.max(startOfDay(it.s), from);
+    if (day !== lastDay) {
+      lastDay = day;
+      const rel = relDay(day);
+      h += '<div class="day-h"><h3>' + esc(rel || WD_LONG[new Date(day).getDay()]) + '</h3><span class="num">' + esc((rel ? WD_SHORT[new Date(day).getDay()] + ", " : "") + new Date(day).getDate() + ". " + MONTHS[new Date(day).getMonth()]) + "</span></div>";
+    }
+    const tm = it.ad ? (it.src === "task" ? "fällig" : "ganztags") : hm(it.s) + "<small>" + hm(it.e) + "</small>";
+    h += '<button class="row' + (it.st === "cancelled" ? " cancelled" : "") + (it.src === "task" ? " task" : "") + '" style="--c:' + it.c + (it.e < now && !it.ad ? ";opacity:.62" : "") + '" data-act="open" data-id="' + esc(it.id) + '">';
+    h += '<span class="tm">' + tm + '</span><span class="bar"></span><span class="bd"><b>' + esc(it.t) + '</b><span class="meta">' + (it.loc ? "<span>" + esc(it.loc) + "</span>" : "") + badgesFor(it, true) + "</span></span></button>";
+  }
+  return h + "</div>";
+}
+
+/* ----- Aufgaben ----- */
+function dueLabel(due) {
+  if (!due) return { txt: "ohne Datum", cls: "" };
+  const diff = Math.round((fromKey(due) - startOfDay(Date.now())) / DAY);
+  if (diff < 0) return { txt: "überfällig seit " + (-diff === 1 ? "gestern" : -diff + " Tagen"), cls: "over" };
+  if (diff === 0) return { txt: "heute fällig", cls: "soon" };
+  if (diff === 1) return { txt: "morgen fällig", cls: "soon" };
+  if (diff < 7) return { txt: "fällig " + WD_LONG[new Date(fromKey(due)).getDay()], cls: diff <= 2 ? "soon" : "" };
+  return { txt: "fällig am " + dShort(fromKey(due)), cls: "" };
+}
+function renderTasks() {
+  const tasks = allTasks();
+  const courses = courseList();
+  let h = '<header class="top"><h1 class="page-title">Aufgaben</h1></header><div class="scroller"><div class="page">';
+  h += '<form class="card" id="task-form"><div class="frow"><label class="f" style="grid-column:1/-1">Neue Aufgabe<input class="in" id="tf-title" required placeholder="z. B. Übungsblatt 5 hochladen" autocomplete="off"></label>';
+  h += '<label class="f">Fällig am<input class="in" type="date" id="tf-due"></label>';
+  h += '<label class="f">Kurs<select class="in" id="tf-course"><option value="">kein Kurs</option>' + courses.map(c => '<option value="' + esc(c.k) + '">' + esc(c.name) + "</option>").join("") + "</select></label></div>";
+  h += '<div class="inline"><button class="btn primary" type="submit">' + ICON.plus + "Hinzufügen</button>" + (demoActive() ? '<span class="hint">Die Beispiele verschwinden, sobald du etwas Eigenes anlegst.</span>' : "") + "</div></form>";
+  const open = tasks.filter(t => !t.done).sort((a, b) => (a.due || "9999").localeCompare(b.due || "9999"));
+  const done = tasks.filter(t => t.done).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0)).slice(0, 30);
+  const today = dateKey(Date.now());
+  const weekEnd = dateKey(addDays(startOfDay(Date.now()), 7));
+  const groups = [
+    ["Überfällig", open.filter(t => t.due && t.due < today), "danger"],
+    ["Diese Woche", open.filter(t => t.due && t.due >= today && t.due < weekEnd), ""],
+    ["Später", open.filter(t => t.due && t.due >= weekEnd), ""],
+    ["Ohne Datum", open.filter(t => !t.due), ""],
+    ["Erledigt", done, ""]
+  ];
+  if (!tasks.length) h += '<div class="empty"><strong>Keine Aufgaben</strong><span>Abgaben und To-dos tauchen mit Fälligkeitsdatum auch im Kalender auf.</span></div>';
+  for (const [label, list, cls] of groups) {
+    if (!list.length) continue;
+    h += '<div class="section"><div class="group-h ' + cls + '">' + label + " · " + list.length + '</div><div class="items">';
+    for (const t of list) {
+      const c = t.k ? courseColor(t.k) : OWN_COLOR;
+      const dl = dueLabel(t.due);
+      const cname = t.k ? (courses.find(x => x.k === t.k) || {}).name : "";
+      h += '<div class="item' + (t.done ? " done" : "") + '" style="--c:' + c + '"><button class="check" role="checkbox" aria-checked="' + !!t.done + '" aria-label="Erledigt" data-act="task-toggle" data-id="' + esc(t.id) + '">' + (t.done ? ICON.check : "") + "</button>";
+      h += '<div class="grow"><b>' + esc(t.t) + '</b><span class="meta"><span class="due ' + (t.done ? "" : dl.cls) + '">' + esc(dl.txt) + "</span>" + (cname ? '<span>· ' + esc(cname) + "</span>" : "") + "</span></div>";
+      h += '<button class="btn icon" aria-label="Aufgabe löschen" data-act="task-del" data-id="' + esc(t.id) + '">' + ICON.trash + "</button></div>";
+    }
+    h += "</div></div>";
+  }
+  return h + "</div></div>";
+}
+
+/* ----- Kurse ----- */
+function renderCourses() {
+  const list = courseList();
+  let h = '<header class="top"><h1 class="page-title">Kurse</h1></header><div class="scroller"><div class="page">';
+  if (!list.length) {
+    h += '<div class="empty"><strong>Noch keine Kurse</strong><span>Kurse entstehen automatisch aus deinem importierten Stundenplan.</span><button class="btn primary" data-act="goto" data-tab="sources">Kalender importieren</button></div>';
+    return h + "</div></div>";
+  }
+  h += '<p class="hint">Farbe antippen zum Ändern. Mit dem Schalter blendest du einen Kurs im Kalender aus, etwa eine Parallelgruppe, die du nicht besuchst.</p>';
+  h += '<div class="items">';
+  for (const c of list) {
+    const info = courseInfo(c.k);
+    const col = courseColor(c.k);
+    h += '<div class="item" style="--c:' + col + '"><button class="swatch" aria-label="Farbe ändern" data-act="course-color" data-k="' + esc(c.k) + '"></button>';
+    h += '<div class="grow"><b>' + esc(c.name) + '</b><span class="meta">' + (c.ty ? '<span class="badge type" style="--c:' + col + '">' + esc(c.ty) + "</span>" : "") + (c.exam ? '<span class="badge exam">Prüfung</span>' : "") + '<span class="num">' + c.count + " Termin" + (c.count === 1 ? "" : "e") + "</span>" + (c.next ? '<span class="num">· nächster ' + esc(dShort(c.next)) + " " + hm(c.next) + "</span>" : "") + "</span></div>";
+    h += '<button class="switch" role="switch" aria-checked="' + !info.hidden + '" aria-label="Im Kalender anzeigen" data-act="course-toggle" data-k="' + esc(c.k) + '"></button></div>';
+    if (ui.openCourse === c.k) {
+      h += '<div class="palette">' + PALETTE.map(p => '<button style="--c:' + p + '" aria-label="Farbe ' + p + '" aria-pressed="' + (p === col) + '" data-act="course-setcolor" data-k="' + esc(c.k) + '" data-c="' + p + '"></button>').join("") + "</div>";
+    }
+  }
+  h += "</div>";
+  const nHidden = Object.keys(state.hidden).length;
+  if (nHidden) h += '<div class="inline"><span class="hint">' + nHidden + " einzelne Termine ausgeblendet.</span><button class=\"btn small\" data-act=\"unhide-all\">Alle wieder einblenden</button></div>";
+  return h + "</div></div>";
+}
+
+/* ----- Quellen & Einstellungen ----- */
+function renderSources() {
+  const s = state.settings;
+  let h = '<header class="top"><h1 class="page-title">Quellen</h1></header><div class="scroller"><div class="page">';
+  h += '<div class="section"><h2>Deine Kalender</h2>';
+  if (!state.sources.length) h += '<p class="hint">Noch nichts importiert. Am besten holst du dir den iCal-Link deines Stundenplans aus dem Uni-System (Anleitung unten).</p>';
+  else {
+    h += '<div class="items">';
+    for (const src of state.sources) {
+      const busy = syncing.has(src.id);
+      h += '<div class="item"><div class="grow"><b>' + esc(src.name || "Kalender") + '</b><span class="meta"><span>' + (src.kind === "url" ? "Abo-Link" : "Datei") + '</span><span class="num">· ' + (src.count || 0) + " Termine</span><span>· " + (busy ? "lädt …" : "aktualisiert " + esc(ago(src.lastSync))) + "</span></span>" + (src.lastError ? '<span class="err">' + esc(src.lastError) + "</span>" : "") + "</div>";
+      h += '<div class="inline">';
+      if (src.kind === "url") h += '<button class="btn small" data-act="sync" data-id="' + src.id + '"' + (busy ? " disabled" : "") + ">Aktualisieren</button>";
+      h += '<label class="btn small">Datei …<input type="file" class="vh" accept=".ics,.ical,.ifb,text/calendar" data-reimport="' + src.id + '"></label>';
+      h += '<button class="btn small icon danger" aria-label="Quelle entfernen" data-act="src-del" data-id="' + src.id + '">' + ICON.trash + "</button></div></div>";
+    }
+    h += "</div>";
+  }
+  h += "</div>";
+
+  h += '<div class="section"><h2>Kalender-Link abonnieren</h2><p class="hint">Mit einem Abo-Link aktualisiert sich der Stundenplan bei jedem Öffnen, wie bei Studo.</p>';
+  h += '<form class="card" id="src-form"><div class="frow"><label class="f">Name<input class="in" id="sf-name" placeholder="z. B. Stundenplan Uni" autocomplete="off"></label>';
+  h += '<label class="f" style="grid-column:1/-1">iCal-Link (https:// oder webcal://)<input class="in" id="sf-url" type="url" required placeholder="https://online.uni.ac.at/…/ical?…" autocomplete="off" spellcheck="false"></label></div>';
+  h += '<div class="inline"><button class="btn primary" type="submit">Hinzufügen und laden</button></div></form></div>';
+
+  h += '<div class="section"><h2>Datei importieren</h2>';
+  h += '<div class="drop" id="drop"><span>.ics-Datei hierher ziehen oder</span><label class="btn primary">Datei auswählen<input type="file" class="vh" id="file-in" accept=".ics,.ical,.ifb,text/calendar,.json" multiple></label><span class="hint">Klappt immer, auch wenn der Abo-Link blockiert wird. Beim nächsten Import einer neuen Version bei der Quelle „Datei …“ wählen, dann bleiben Notizen und Farben erhalten.</span></div></div>';
+
+  h += '<details class="help"><summary>Wo finde ich den Kalender-Link meiner Uni?</summary><div>';
+  h += "<p>Fast jedes Uni-System kann deinen persönlichen Stundenplan als <b>iCal</b> (.ics) ausgeben. Suche beim Kalender oder Stundenplan nach „Export“, „Abonnieren“, „Veröffentlichen“ oder „iCal“.</p><ul>";
+  h += "<li><b>CAMPUSonline</b> (z. B. TUGonline, UNIGRAZonline): Anwendung <i>Terminkalender</i> bzw. <i>Kalender</i> öffnen, dort „Veröffentlichen“ oder „Export“ wählen und den iCal-Link kopieren.</li>";
+  h += "<li><b>TISS</b> (TU Wien): im <i>Terminkalender</i> nach dem iCal-Export suchen und den persönlichen Link kopieren.</li>";
+  h += "<li><b>u:space</b> (Uni Wien) und andere Systeme: im Stundenplan oder Kalender nach „iCal“ oder „Kalender abonnieren“ suchen.</li>";
+  h += "<li><b>Moodle</b>: Kalender → <i>Importieren oder exportieren</i> → <i>Kalender exportieren</i> → „Kalender-URL abfragen“.</li>";
+  h += "<li><b>Google, iCloud, Outlook</b>: die öffentliche bzw. geheime iCal-Adresse des Kalenders verwenden.</li></ul>";
+  h += "<p>Behandle den Link wie ein Passwort: Wer ihn kennt, sieht deinen Stundenplan.</p></div></details>";
+
+  h += '<div class="section"><h2>Darstellung</h2><div class="card"><div class="frow">';
+  h += '<label class="f">Tag beginnt um<select class="in" data-set="dayStart">' + [6, 7, 8, 9, 10].map(x => '<option value="' + x + '"' + (s.dayStart === x ? " selected" : "") + ">" + pad(x) + ":00</option>").join("") + "</select></label>";
+  h += '<label class="f">Tag endet um<select class="in" data-set="dayEnd">' + [16, 17, 18, 19, 20, 21, 22].map(x => '<option value="' + x + '"' + (s.dayEnd === x ? " selected" : "") + ">" + pad(x) + ":00</option>").join("") + "</select></label>";
+  h += '<label class="f">Wochenende<select class="in" data-set="weekend">' + [["auto", "nur wenn Termine"], ["always", "immer zeigen"], ["never", "nie zeigen"]].map(([v, l]) => '<option value="' + v + '"' + (s.weekend === v ? " selected" : "") + ">" + l + "</option>").join("") + "</select></label>";
+  h += "</div></div></div>";
+
+  h += '<div class="section"><h2>Sichern und übertragen</h2><div class="card">';
+  h += '<p class="status">' + (Store.mode === "cloud" ? "Deine Daten liegen in deinem claude.ai-Konto und sind auf allen deinen Geräten gleich." : "Deine Daten liegen nur in diesem Browser. Mach ab und zu eine Sicherung, besonders vor dem Löschen der Browserdaten.") + "</p>";
+  h += '<div class="inline"><button class="btn" data-act="backup">Sicherung speichern (.json)</button><label class="btn">Sicherung laden …<input type="file" class="vh" accept=".json,application/json" id="backup-in"></label>';
+  if (!inArtifact) h += '<button class="btn" data-act="export-ics">Alles als .ics für Apple/Google Kalender</button>';
+  h += "</div></div></div>";
+
+  h += '<details class="help"><summary>Erweitert: Proxy für Abo-Links</summary><div>';
+  h += "<p>Viele Uni-Server erlauben Browsern nicht, den Kalender direkt abzurufen (CORS-Sperre). Ein Proxy holt die Datei stellvertretend. <b>Achtung:</b> Der Betreiber des Proxys sieht deinen Kalender-Link und damit deinen Stundenplan.</p>";
+  h += '<label class="f">Proxy-Adresse (der Link wird angehängt oder ersetzt <code>{url}</code>)<input class="in" id="proxy-in" value="' + esc(s.proxy) + '" placeholder="https://mein-proxy.example/?url=" spellcheck="false" autocomplete="off"></label>';
+  h += '<div class="inline"><button class="btn small" data-act="proxy-save">Speichern</button></div></div></details>';
+
+  h += '<div class="section"><h2>Alles zurücksetzen</h2><div class="card">';
+  if (!ui.confirmWipe) h += '<div class="inline"><button class="btn danger" data-act="wipe">Alle Daten löschen …</button></div>';
+  else h += '<p>Wirklich alle Quellen, eigenen Termine, Aufgaben, Notizen und Farben löschen? Das lässt sich nicht rückgängig machen.</p><div class="inline"><button class="btn danger solid" data-act="wipe-yes">Ja, alles löschen</button><button class="btn" data-act="wipe-no">Abbrechen</button></div>';
+  h += "</div></div>";
+  return h + "</div></div>";
+}
+
+/* ----- Blatt: Termin-Details & Bearbeiten ----- */
+let sheet = null; // {type:'event', id} | {type:'edit', data}
+function findItem(id) {
+  if (id.startsWith("task-")) {
+    const t = allTasks().find(x => "task-" + x.id === id);
+    return t ? itemsBetween(fromKey(t.due), fromKey(t.due) + DAY - 1).find(i => i.id === id) : null;
+  }
+  const e = allFeedEvents().find(x => x.id === id);
+  if (e) return itemsBetween(e.s, e.e, { includeHidden: true }).find(i => i.id === id);
+  const baseId = id.split("@")[0];
+  const o = state.own.find(x => x.id === baseId);
+  if (!o) return null;
+  const idx = id.includes("@") ? +id.split("@")[1] : 0;
+  const s = o.rep === "weekly" ? addDays(o.s, 7 * idx) : o.s;
+  return itemsBetween(s, s + Math.max(1, o.e - o.s)).find(i => i.id === id) || null;
+}
+function openSheet(s) { sheet = s; renderSheet(); }
+function closeSheet() { sheet = null; renderSheet(); }
+
+function renderSheet() {
+  const root = document.getElementById("overlay-root");
+  if (!sheet) { root.innerHTML = ""; return; }
+  let h = '<div class="overlay" data-act="close-overlay"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">';
+  if (sheet.type === "event") {
+    const it = findItem(sheet.id);
+    if (!it) { sheet = null; root.innerHTML = ""; return; }
+    h += '<div class="sheet-head" style="--c:' + it.c + '"><span class="dot"></span><div><h2 id="sheet-title">' + esc(it.t) + '</h2><div class="inline">' + badgesFor(it) + "</div></div></div>";
+    const when = it.ad ? dLong(it.s) + (it.e - it.s > DAY ? " – " + dLong(it.e - 1) : "") + (it.src === "task" ? " · fällig" : " · ganztags") : dLong(it.s) + "\n" + hm(it.s) + "–" + hm(it.e) + " Uhr (" + Math.round((it.e - it.s) / 60000) + " Min.)";
+    h += '<div class="kv">' + ICON.clock + "<div>" + esc(when) + "</div></div>";
+    if (it.chg && it.chg.prev) {
+      const p = it.chg.prev;
+      const was = [];
+      if (p.s !== it.s || p.e !== it.e) was.push(dShort(p.s) + " " + hm(p.s) + "–" + hm(p.e));
+      if ((p.loc || "") !== (it.loc || "")) was.push(p.loc || "kein Raum");
+      if (was.length) h += '<div class="kv">' + ICON.alert + "<div><b>Geändert</b> – vorher: " + esc(was.join(", ")) + "</div></div>";
+    }
+    if (it.loc) h += '<div class="kv">' + ICON.pin + "<div>" + esc(it.loc) + '<br><a href="' + mapsUrl(it.loc) + '" target="_blank" rel="noopener">Auf der Karte zeigen</a></div></div>';
+    if (it.who) h += '<div class="kv">' + ICON.person + "<div>" + esc(it.who) + "</div></div>";
+    if (it.desc) h += '<div class="kv">' + ICON.text + "<div>" + esc(it.desc) + "</div></div>";
+    if (it.url) h += '<div class="kv">' + ICON.link + '<div><a href="' + esc(it.url) + '" target="_blank" rel="noopener">Im Uni-System öffnen</a></div></div>';
+    if (it.src === "feed") {
+      h += '<label class="f">Meine Notiz<textarea class="in" id="note-in" placeholder="z. B. Skript Kapitel 3 mitnehmen">' + esc(it.note) + "</textarea></label>";
+      h += '<div class="acts"><button class="btn" data-act="hide-one" data-id="' + esc(it.id) + '">Termin ausblenden</button><button class="btn" data-act="hide-course" data-k="' + esc(it.k) + '">Ganzen Kurs ausblenden</button><span class="sp"></span><button class="btn primary" data-act="note-save" data-id="' + esc(it.id) + '">Fertig</button></div>';
+    } else if (it.src === "own") {
+      if (it.note) h += '<div class="kv">' + ICON.text + "<div>" + esc(it.note) + "</div></div>";
+      h += '<div class="acts"><button class="btn danger" data-act="own-del" data-id="' + esc(it.base) + '">' + ICON.trash + 'Löschen</button><span class="sp"></span><button class="btn" data-act="own-edit" data-id="' + esc(it.base) + '">Bearbeiten</button><button class="btn primary" data-act="close">Fertig</button></div>';
+    } else {
+      h += '<div class="acts"><button class="btn" data-act="goto" data-tab="tasks">Zu den Aufgaben</button><span class="sp"></span><button class="btn primary" data-act="task-done-close" data-id="' + esc(it.raw.id) + '">' + ICON.check + "Erledigt</button></div>";
+    }
+  } else if (sheet.type === "edit") {
+    const d = sheet.data;
+    h += '<h2 id="sheet-title">' + (d.id ? "Termin bearbeiten" : "Neuer Termin") + "</h2>";
+    h += '<form id="ev-form" class="section"><label class="f">Titel<input class="in" id="ef-t" required value="' + esc(d.t) + '" placeholder="z. B. Lerngruppe Analysis" autocomplete="off"></label>';
+    h += '<div class="frow"><label class="f">Art<select class="in" id="ef-kind">' + Object.entries(KIND_LABEL).map(([v, l]) => '<option value="' + v + '"' + (d.kind === v ? " selected" : "") + ">" + l + "</option>").join("") + "</select></label>";
+    h += '<label class="f">Datum<input class="in" type="date" id="ef-date" required value="' + dateKey(d.s) + '"></label></div>';
+    h += '<label class="cb"><input type="checkbox" id="ef-ad"' + (d.ad ? " checked" : "") + "> Ganztägig</label>";
+    h += '<div class="frow" id="ef-times"' + (d.ad ? " hidden" : "") + '><label class="f">Von<input class="in" type="time" id="ef-from" value="' + hm(d.s) + '"></label><label class="f">Bis<input class="in" type="time" id="ef-to" value="' + hm(d.e) + '"></label></div>';
+    h += '<label class="f">Ort<input class="in" id="ef-loc" value="' + esc(d.loc || "") + '" placeholder="z. B. Bibliothek, 2. Stock" autocomplete="off"></label>';
+    h += '<div class="frow"><label class="f">Wiederholen<select class="in" id="ef-rep"><option value="none">nie</option><option value="weekly"' + (d.rep === "weekly" ? " selected" : "") + ">jede Woche</option></select></label>";
+    h += '<label class="f" id="ef-until-wrap"' + (d.rep === "weekly" ? "" : " hidden") + '>bis einschließlich<input class="in" type="date" id="ef-until" value="' + (d.until ? dateKey(d.until) : dateKey(addDays(d.s, 90))) + '"></label></div>';
+    h += '<div class="f">Farbe<div class="inline" style="gap:8px">' + [OWN_COLOR].concat(PALETTE.filter(p => p !== OWN_COLOR)).slice(0, 10).map(p => '<button type="button" class="swatch" style="--c:' + p + (p === (d.color || OWN_COLOR) ? ";box-shadow:0 0 0 2px var(--fg)" : "") + '" aria-label="Farbe ' + p + '" data-act="ef-color" data-c="' + p + '"></button>').join("") + "</div></div>";
+    h += '<label class="f">Notizen<textarea class="in" id="ef-notes">' + esc(d.notes || "") + "</textarea></label>";
+    h += '<div class="acts"><button type="button" class="btn" data-act="close">Abbrechen</button><span class="sp"></span><button class="btn primary" type="submit">Speichern</button></div></form>';
+  }
+  h += "</div></div>";
+  root.innerHTML = h;
+  const first = root.querySelector("#ef-t");
+  if (first && !sheet.data.id) setTimeout(() => first.focus(), 30);
+}
+
+/* ----- Hinweis-Leiste ----- */
+let toastTimer = null;
+function toast(msg, action) {
+  const root = document.getElementById("toast-root");
+  root.innerHTML = '<div class="toast" role="status"><span>' + esc(msg) + "</span>" + (action ? '<button data-act="toast-action">' + esc(action.label) + "</button>" : "") + "</div>";
+  root._action = action ? action.run : null;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { root.innerHTML = ""; root._action = null; }, action ? 6000 : 4200);
+}
+
+/* =====================================================================
+   8. Bedienung
+   ===================================================================== */
+function saveUi() { lsSet("ui", { tab: ui.tab, view: ui.view }); }
+function move(dir) {
+  const step = ui.view === "week" ? 7 : ui.view === "list" ? 7 : 1;
+  ui.cursor = addDays(ui.cursor, dir * step);
+  if (ui.view === "week") ui.cursor = startOfWeek(ui.cursor) === startOfWeek(Date.now()) ? startOfDay(Date.now()) : startOfWeek(ui.cursor);
+  render();
+}
+function leaveDemo() { if (demoActive()) { state.settings.demoOff = true; } }
+
+function newEventDraft(dayMs) {
+  const base = startOfDay(dayMs ?? ui.cursor);
+  const now = new Date();
+  let hour = base === startOfDay(Date.now()) ? Math.min(22, now.getHours() + 1) : 10;
+  const s = base + hour * 3600000;
+  return { t: "", kind: "termin", s, e: s + 90 * 60000, ad: false, loc: "", rep: "none", until: null, color: OWN_COLOR, notes: "" };
+}
+
+function onClick(ev) {
+  const el = ev.target.closest("[data-act]");
+  if (!el) return;
+  const act = el.dataset.act;
+  if (act === "close-overlay" && ev.target !== el) return;
+  switch (act) {
+    case "goto": ui.tab = el.dataset.tab; closeSheet(); saveUi(); render(); break;
+    case "today": ui.cursor = startOfDay(Date.now()); render(); break;
+    case "prev": move(-1); break;
+    case "next": move(1); break;
+    case "view": ui.view = el.dataset.v; saveUi(); render(); break;
+    case "pick": ui.cursor = +el.dataset.d; render(); break;
+    case "pick-day": ui.cursor = +el.dataset.d; ui.view = "day"; saveUi(); render(); break;
+    case "demo-off": state.settings.demoOff = true; Store.save("meta"); render(); break;
+    case "open": openSheet({ type: "event", id: el.dataset.id }); break;
+    case "close": case "close-overlay": closeSheet(); break;
+    case "new-event": openSheet({ type: "edit", data: newEventDraft() }); break;
+    case "note-save": {
+      const v = (document.getElementById("note-in") || {}).value || "";
+      const id = el.dataset.id;
+      if (v.trim()) state.notes[id] = v.trim(); else delete state.notes[id];
+      if (!demoActive()) Store.save("meta");
+      closeSheet(); render(); break;
+    }
+    case "hide-one": {
+      const id = el.dataset.id;
+      state.hidden[id] = 1; Store.save("meta"); closeSheet(); render();
+      toast("Termin ausgeblendet.", { label: "Rückgängig", run: () => { delete state.hidden[id]; Store.save("meta"); render(); } });
+      break;
+    }
+    case "hide-course": {
+      const k = el.dataset.k;
+      state.courses[k] = Object.assign({}, state.courses[k], { hidden: true }); Store.save("meta"); closeSheet(); render();
+      toast("Kurs ausgeblendet. Unter „Kurse“ wieder einschalten.", { label: "Rückgängig", run: () => { state.courses[k].hidden = false; Store.save("meta"); render(); } });
+      break;
+    }
+    case "own-edit": {
+      const o = state.own.find(x => x.id === el.dataset.id);
+      if (o) openSheet({ type: "edit", data: Object.assign({}, o) });
+      break;
+    }
+    case "own-del": {
+      const idx = state.own.findIndex(x => x.id === el.dataset.id);
+      if (idx < 0) break;
+      const [removed] = state.own.splice(idx, 1);
+      Store.save("meta"); closeSheet(); render();
+      toast("Termin gelöscht.", { label: "Rückgängig", run: () => { state.own.splice(idx, 0, removed); Store.save("meta"); render(); } });
+      break;
+    }
+    case "ef-color": {
+      sheet.data.color = el.dataset.c;
+      for (const b of document.querySelectorAll('[data-act="ef-color"]')) b.style.boxShadow = b.dataset.c === el.dataset.c ? "0 0 0 2px var(--fg)" : "";
+      break;
+    }
+    case "task-toggle": case "task-done-close": {
+      if (demoActive()) { toast("Das ist eine Beispiel-Aufgabe. Leg oben eine eigene an."); break; }
+      const t = state.tasks.find(x => x.id === el.dataset.id);
+      if (!t) break;
+      t.done = act === "task-done-close" ? 1 : (t.done ? 0 : 1);
+      t.doneAt = t.done ? Date.now() : 0;
+      Store.save("meta");
+      if (act === "task-done-close") closeSheet();
+      render(); break;
+    }
+    case "task-del": {
+      if (demoActive()) { toast("Das ist eine Beispiel-Aufgabe."); break; }
+      const idx = state.tasks.findIndex(x => x.id === el.dataset.id);
+      if (idx < 0) break;
+      const [removed] = state.tasks.splice(idx, 1);
+      Store.save("meta"); render();
+      toast("Aufgabe gelöscht.", { label: "Rückgängig", run: () => { state.tasks.splice(idx, 0, removed); Store.save("meta"); render(); } });
+      break;
+    }
+    case "course-color": ui.openCourse = ui.openCourse === el.dataset.k ? null : el.dataset.k; render(); break;
+    case "course-setcolor": state.courses[el.dataset.k] = Object.assign({}, state.courses[el.dataset.k], { color: el.dataset.c }); ui.openCourse = null; if (!demoActive()) Store.save("meta"); render(); break;
+    case "course-toggle": { const k = el.dataset.k; const c = Object.assign({}, state.courses[k]); c.hidden = !c.hidden; state.courses[k] = c; if (!demoActive()) Store.save("meta"); render(); break; }
+    case "unhide-all": state.hidden = {}; Store.save("meta"); render(); toast("Alle Termine sind wieder sichtbar."); break;
+    case "sync": { const src = state.sources.find(s => s.id === el.dataset.id); if (src) syncSource(src, false); break; }
+    case "src-del": {
+      const idx = state.sources.findIndex(s => s.id === el.dataset.id);
+      if (idx < 0) break;
+      const [src] = state.sources.splice(idx, 1);
+      const evs = state.events[src.id];
+      delete state.events[src.id];
+      Store.remove("src." + src.id); Store.save("meta"); render();
+      toast("„" + (src.name || "Kalender") + "“ entfernt.", { label: "Rückgängig", run: () => { state.sources.splice(idx, 0, src); state.events[src.id] = evs; Store.save("src." + src.id); Store.save("meta"); render(); } });
+      break;
+    }
+    case "backup": exportBackup(); break;
+    case "export-ics": exportIcs(); break;
+    case "proxy-save": state.settings.proxy = (document.getElementById("proxy-in").value || "").trim(); Store.save("meta"); toast(state.settings.proxy ? "Proxy gespeichert." : "Proxy entfernt."); break;
+    case "wipe": ui.confirmWipe = true; render(); break;
+    case "wipe-no": ui.confirmWipe = false; render(); break;
+    case "wipe-yes": {
+      for (const src of state.sources) Store.remove("src." + src.id);
+      state = freshState(); state.settings.demoOff = true;
+      Store.save("meta"); ui.confirmWipe = false; render(); toast("Alle Daten gelöscht.");
+      break;
+    }
+    case "toast-action": { const root = document.getElementById("toast-root"); const fn = root._action; root.innerHTML = ""; root._action = null; if (fn) fn(); break; }
+  }
+}
+
+function onSubmit(ev) {
+  const f = ev.target;
+  if (f.id === "ev-form") {
+    ev.preventDefault();
+    const d = sheet.data;
+    const t = document.getElementById("ef-t").value.trim();
+    if (!t) return;
+    const day = fromKey(document.getElementById("ef-date").value || dateKey(d.s));
+    const ad = document.getElementById("ef-ad").checked;
+    let s, e;
+    if (ad) { s = day; e = addDays(day, 1); }
+    else {
+      const [fh, fm] = (document.getElementById("ef-from").value || "10:00").split(":").map(Number);
+      const [th, tm] = (document.getElementById("ef-to").value || "11:00").split(":").map(Number);
+      const sd = new Date(day); sd.setHours(fh, fm, 0, 0); s = sd.getTime();
+      const ed = new Date(day); ed.setHours(th, tm, 0, 0); e = ed.getTime();
+      if (e <= s) e = s + 60 * 60000;
+    }
+    const rep = document.getElementById("ef-rep").value;
+    const untilV = document.getElementById("ef-until").value;
+    const rec = Object.assign({}, d, {
+      t, s, e, ad, kind: document.getElementById("ef-kind").value, loc: document.getElementById("ef-loc").value.trim(),
+      rep, until: rep === "weekly" && untilV ? fromKey(untilV) + DAY - 1 : null, notes: document.getElementById("ef-notes").value.trim(), color: d.color || OWN_COLOR
+    });
+    leaveDemo();
+    if (rec.id) { const i = state.own.findIndex(x => x.id === rec.id); if (i >= 0) state.own[i] = rec; else state.own.push(rec); }
+    else { rec.id = uid(); state.own.push(rec); }
+    Store.save("meta");
+    ui.cursor = startOfDay(s);
+    closeSheet(); render();
+    toast("Termin gespeichert.");
+  } else if (f.id === "task-form") {
+    ev.preventDefault();
+    const t = document.getElementById("tf-title").value.trim();
+    if (!t) return;
+    leaveDemo();
+    state.tasks.push({ id: uid(), t, due: document.getElementById("tf-due").value || null, k: document.getElementById("tf-course").value || null, done: 0 });
+    Store.save("meta");
+    render();
+    setTimeout(() => { const i = document.getElementById("tf-title"); if (i) i.focus(); }, 0);
+  } else if (f.id === "src-form") {
+    ev.preventDefault();
+    const url = document.getElementById("sf-url").value.trim();
+    if (!url) return;
+    const name = document.getElementById("sf-name").value.trim();
+    const src = { id: uid(), name: name || "Stundenplan", autoName: !name, url, kind: "url", lastSync: 0, count: 0 };
+    leaveDemo();
+    state.sources.push(src);
+    Store.save("meta");
+    syncSource(src, false);
+  }
+}
+
+function onChange(ev) {
+  const el = ev.target;
+  if (el.id === "jump" && el.value) { ui.cursor = fromKey(el.value); render(); return; }
+  if (el.id === "file-in") { leaveDemo(); importFiles(el.files); el.value = ""; return; }
+  if (el.dataset && el.dataset.reimport) { importFiles(el.files, el.dataset.reimport); el.value = ""; return; }
+  if (el.id === "backup-in" && el.files[0]) { const rd = new FileReader(); rd.onload = () => importBackup(String(rd.result)); rd.readAsText(el.files[0]); el.value = ""; return; }
+  if (el.dataset && el.dataset.set) {
+    const key = el.dataset.set;
+    state.settings[key] = key === "weekend" ? el.value : +el.value;
+    Store.save("meta"); render(); return;
+  }
+  if (el.id === "ef-ad") { document.getElementById("ef-times").hidden = el.checked; return; }
+  if (el.id === "ef-rep") { document.getElementById("ef-until-wrap").hidden = el.value !== "weekly"; return; }
+}
+
+document.addEventListener("click", onClick);
+document.addEventListener("click", ev => { if (ev.target.id === "jump" && ev.target.showPicker) { try { ev.target.showPicker(); } catch (e) { /* Browser öffnet selbst */ } } });
+document.addEventListener("submit", onSubmit);
+document.addEventListener("change", onChange);
+document.getElementById("tabs").addEventListener("click", ev => {
+  const b = ev.target.closest(".tab");
+  if (!b) return;
+  ui.tab = b.dataset.tab; ui.openCourse = null; ui.confirmWipe = false; saveUi(); render();
+});
+document.addEventListener("keydown", ev => {
+  if (ev.key === "Escape" && sheet) { closeSheet(); return; }
+  if (sheet || ui.tab !== "cal" || ev.metaKey || ev.ctrlKey || ev.altKey) return;
+  if (/^(INPUT|TEXTAREA|SELECT)$/.test((ev.target.tagName || ""))) return;
+  if (ev.key === "ArrowLeft") move(-1);
+  else if (ev.key === "ArrowRight") move(1);
+  else if (ev.key === "t" || ev.key === "h") { ui.cursor = startOfDay(Date.now()); render(); }
+  else if (ev.key === "d") { ui.view = "day"; saveUi(); render(); }
+  else if (ev.key === "w") { ui.view = "week"; saveUi(); render(); }
+  else if (ev.key === "l") { ui.view = "list"; saveUi(); render(); }
+});
+
+/* Wischen am Telefon: links/rechts blättert */
+let touch = null;
+document.addEventListener("touchstart", ev => {
+  if (ui.tab !== "cal" || sheet || !ev.target.closest(".scroller, .strip")) { touch = null; return; }
+  const t = ev.touches[0]; touch = { x: t.clientX, y: t.clientY, at: Date.now() };
+}, { passive: true });
+document.addEventListener("touchend", ev => {
+  if (!touch) return;
+  const t = ev.changedTouches[0];
+  const dx = t.clientX - touch.x, dy = t.clientY - touch.y;
+  if (Math.abs(dx) > 70 && Math.abs(dx) > 2 * Math.abs(dy) && Date.now() - touch.at < 600) move(dx < 0 ? 1 : -1);
+  touch = null;
+}, { passive: true });
+
+/* Datei per Drag & Drop */
+document.addEventListener("dragover", ev => { const d = ev.target.closest && ev.target.closest("#drop"); if (d) { ev.preventDefault(); d.classList.add("over"); } });
+document.addEventListener("dragleave", ev => { const d = ev.target.closest && ev.target.closest("#drop"); if (d) d.classList.remove("over"); });
+document.addEventListener("drop", ev => {
+  const d = ev.target.closest && ev.target.closest("#drop");
+  if (!d) return;
+  ev.preventDefault(); d.classList.remove("over");
+  leaveDemo();
+  importFiles(ev.dataTransfer.files);
+});
+
+function afterLoad() {
+  const cutoff = Date.now() - 10 * DAY;
+  for (const id in state.changes) if ((state.changes[id].at || 0) < cutoff) delete state.changes[id];
+}
+
+/* Jede Minute: Jetzt-Linie und „Als Nächstes" aktualisieren */
+let lastDay = startOfDay(Date.now());
+setInterval(() => {
+  if (sheet || document.hidden) return;
+  const a = document.activeElement;
+  if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return;
+  if (startOfDay(Date.now()) !== lastDay) { lastDay = startOfDay(Date.now()); }
+  if (ui.tab === "cal") render();
+}, 60000);
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) return;
+  Store.refreshFromCloud();
+  autoSync();
+  if (!sheet) render();
+});
+
+/* Als App installierbar machen (nur in der eigenständigen Version) */
+if (!inArtifact && /^https?:$/.test(location.protocol) && window.top === window.self) {
+  const l = document.createElement("link"); l.rel = "manifest"; l.href = "manifest.webmanifest"; document.head.appendChild(l);
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+}
+
+afterLoad();
+render();
+autoSync();
+Store.connect();
+</script>
+</body>
+</html>
