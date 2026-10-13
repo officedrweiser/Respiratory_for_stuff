@@ -13,7 +13,7 @@
 <link rel="icon" href="icon.svg" type="image/svg+xml" data-repo-only>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" id="fonts" media="print" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&display=swap">
 <style>
 /* Layout: Ein-Bildschirm-App. Kopfzeile mit Wochenleiste, darunter ein scrollendes Zeitraster
    wie im Hörsaal-Aushang; Tab-Leiste unten am Telefon, Seitenleiste ab 860px. */
@@ -278,6 +278,8 @@ code { font-size: .92em; background: var(--surface-2); padding: 1px 5px; border-
 
 <script>
 "use strict";
+/* Schriften erst nachladen, damit ein langsames Netz die App nicht aufhält */
+(() => { const f = document.getElementById("fonts"); if (f) f.media = "all"; })();
 
 /* =====================================================================
    1. Hilfsfunktionen
@@ -801,7 +803,7 @@ const Store = {
     } catch (e) {
       if (e && (e.code === "not_granted" || e.code === "revoked" || e.code === "capability_disabled")) { this.cloud = null; this.mode = "local"; }
     }
-    render();
+    render({ soft: true });
   },
   async refreshFromCloud() {
     if (!this.cloud || this.dirty.size || this.flushing) return;
@@ -816,7 +818,7 @@ const Store = {
       for (const src of st.sources) st.events[src.id] = (await this.cloudRead("src." + src.id)) || [];
       state = st;
       afterLoad();
-      render();
+      render({ soft: true });
     } catch (e) { /* nächstes Mal */ }
   }
 };
@@ -1002,6 +1004,8 @@ async function fetchIcs(url) {
   }
   if (lastErr) throw lastErr;
   if (inArtifact) throw new Error("In der claude.ai-Ansicht darf die Seite keine fremden Adressen laden. Lade die .ics-Datei herunter und importiere sie mit „Datei importieren“.");
+  if (navigator.onLine === false) throw new Error("Keine Internetverbindung. Versuch es später nochmal.");
+  if (onGithubPages && !px) throw new Error("Dieser Uni-Server lässt das Laden durch Webseiten nicht zu. Nimm oben „Automatisch über GitHub“.");
   throw new Error(px ? "Auch über den Proxy kam nichts an. Prüfe die Proxy-Adresse oder importiere die .ics-Datei." : "Der Uni-Server lässt das direkte Laden im Browser nicht zu. Importiere die .ics-Datei oder trage unter „Erweitert“ einen Proxy ein.");
 }
 
@@ -1009,7 +1013,7 @@ const syncing = new Set();
 async function syncSource(src, quiet) {
   if (src.kind !== "url" || syncing.has(src.id)) return;
   syncing.add(src.id);
-  render();
+  render({ soft: true });
   try {
     const text = await fetchIcs(src.url);
     const r = applyImport(src, text);
@@ -1021,10 +1025,11 @@ async function syncSource(src, quiet) {
     if (!quiet) toast(src.lastError);
   } finally {
     syncing.delete(src.id);
-    render();
+    render({ soft: true });
   }
 }
 function autoSync() {
+  if (canGh && !gh.busy && Date.now() - gh.checked > (gh.status === "none" || gh.status === "unknown" ? 30000 : 10 * 60000)) ghSync(true);
   for (const src of state.sources) {
     if (src.kind === "url" && Date.now() - Math.max(src.lastSync || 0, src.lastTry || 0) > 30 * 60000) syncSource(src, true);
   }
@@ -1038,7 +1043,7 @@ function importFiles(files, targetId) {
     const rd = new FileReader();
     rd.onload = () => {
       const text = String(rd.result || "");
-      if (/^\s*\{/.test(text) && /"sources"/.test(text)) { importBackup(text); return; }
+      if (/\.json$/i.test(f.name) && /^\s*\{/.test(text) && /"sources"/.test(text)) { importBackup(text); return; }
       let src = targetId ? state.sources.find(s => s.id === targetId) : null;
       const isNew = !src;
       if (!src) src = { id: uid(), name: f.name.replace(/\.(ics|ical|ifb|icalendar|txt)$/i, ""), kind: "file", lastSync: 0, count: 0, autoName: true };
@@ -1056,6 +1061,124 @@ function importFiles(files, targetId) {
     rd.readAsText(f);
   }
 }
+
+/* =====================================================================
+   5b. Automatischer Abgleich über GitHub Pages
+   Eine GitHub-Aktion holt den Stundenplan alle zwei Stunden vom Uni-Server
+   und legt ihn verschlüsselt neben die App (daten/stundenplan.json).
+   Die App entschlüsselt ihn mit dem Passwort, das nur auf dem Gerät liegt.
+   ===================================================================== */
+const GH_DATA = "daten/stundenplan.json";
+const canGh = !inArtifact && /^https?:$/.test(location.protocol);
+const onGithubPages = /\.github\.io$/i.test(location.hostname);
+const gh = { status: "unknown", at: null, err: "", busy: false, checked: 0, newPass: "" };
+const b64bytes = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+let ghKey = null;
+
+async function ghDecrypt(bundle, pass) {
+  if (!window.crypto || !crypto.subtle) throw Object.assign(new Error("Entschlüsseln klappt nur, wenn die App über https geöffnet ist."), { code: "env" });
+  const id = bundle.salt + "|" + bundle.iter + "|" + pass;
+  if (!ghKey || ghKey.id !== id) {
+    const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(pass), "PBKDF2", false, ["deriveKey"]);
+    const key = await crypto.subtle.deriveKey({ name: "PBKDF2", salt: b64bytes(bundle.salt), iterations: bundle.iter, hash: "SHA-256" }, base, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
+    ghKey = { id, key };
+  }
+  let plain;
+  try { plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv: b64bytes(bundle.iv) }, ghKey.key, b64bytes(bundle.data)); }
+  catch (e) { throw Object.assign(new Error("Das Passwort passt nicht zum verschlüsselten Stundenplan."), { code: "pass" }); }
+  return new TextDecoder().decode(plain);
+}
+
+async function ghFetch() {
+  const res = await fetch(GH_DATA, { cache: "no-store", credentials: "omit" });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error("Die Stundenplan-Datei ist gerade nicht erreichbar (Fehler " + res.status + ").");
+  const b = await res.json().catch(() => null);
+  if (!b || b.v !== 1 || !b.salt || !b.iv || !b.data || !(b.iter > 0)) throw new Error("Die Stundenplan-Datei hat ein unbekanntes Format.");
+  return b;
+}
+
+async function ghSync(quiet, newPass) {
+  if (!canGh || gh.busy) return;
+  gh.busy = true; gh.err = "";
+  if (!quiet) render({ soft: true });
+  try {
+    const b = await ghFetch();
+    gh.checked = Date.now();
+    if (!b) { gh.status = "none"; if (!quiet) toast("Noch keine verschlüsselte Datei gefunden. Läuft die GitHub-Aktion noch? In einer Minute nochmal tippen."); return; }
+    gh.at = b.at || null;
+    const pass = newPass || lsGet("ghpass") || "";
+    if (!pass) { gh.status = "needpass"; return; }
+    let src = state.sources.find(s => s.kind === "gh");
+    if (src && !newPass && src.remoteAt && src.remoteAt === b.at) { gh.status = "ok"; return; }
+    const text = await ghDecrypt(b, pass);
+    if (newPass) lsSet("ghpass", newPass);
+    if (!src) {
+      leaveDemo();
+      src = { id: uid(), name: "Uni-Stundenplan (automatisch)", kind: "gh", lastSync: 0, count: 0 };
+      state.sources.push(src);
+    }
+    src.remoteAt = b.at || "";
+    const r = applyImport(src, text);
+    gh.status = "ok"; gh.newPass = ""; ui.ghPassForm = false;
+    if (!quiet || r.nNew || r.nChg) toast(src.name + ": " + r.count + " Termine" + (r.nChg ? ", " + r.nChg + " geändert" : "") + (r.nNew ? ", " + r.nNew + " neu" : ""));
+  } catch (e) {
+    if (e && e.code === "pass") { gh.err = e.message; if (!(newPass && gh.status === "ok")) gh.status = "badpass"; }
+    else if (e instanceof TypeError) { if (!quiet) toast("Keine Verbindung. Der Abgleich läuft automatisch, sobald du wieder online bist."); }
+    else { gh.err = (e && e.message) || String(e); if (!quiet) toast(gh.err); }
+  } finally { gh.busy = false; render({ soft: true }); }
+}
+
+/* 24 Zeichen aus 32 gut lesbaren Zeichen = 120 Bit Zufall */
+function genPassphrase() {
+  const abc = "abcdefghijkmnpqrstuvwxyz23456789";
+  const a = new Uint8Array(24);
+  crypto.getRandomValues(a);
+  return Array.from(a, x => abc[x & 31]).join("").match(/.{4}/g).join("-");
+}
+
+function renderGhSection() {
+  const st = gh.status;
+  let h = '<div class="section"><h2>Automatisch über GitHub</h2>';
+  if (gh.busy && st === "unknown") return h + '<p class="hint">Suche nach dem verschlüsselten Stundenplan …</p></div>';
+  const ghSrc = state.sources.find(s => s.kind === "gh");
+  if (st === "ok" || (st === "unknown" && ghSrc)) {
+    const at = gh.at || (ghSrc && ghSrc.remoteAt) || null;
+    const stale = at && Date.now() - Date.parse(at) > 12 * 3600000;
+    h += '<div class="card">';
+    if (st === "unknown") h += '<p class="status">Gerade kein Abgleich möglich (offline?). Du siehst den letzten Stand' + (at ? " (" + esc(ago(Date.parse(at))) + ")" : "") + ".</p>";
+    else if (stale) h += '<p class="err">Seit ' + esc(ago(Date.parse(at)).replace(/^vor /, "")) + ' kam kein neuer Stand von GitHub. Sieh auf github.com unter <i>Actions → Uni-Kalender veröffentlichen</i> nach: Steht dort „Enable workflow“, darauf klicken. Ist ein Lauf rot, stimmt meist der Link in <code>UNIKAL_ICAL_URL</code> nicht mehr.</p>';
+    else h += '<p class="status">Aktiv. GitHub holt deinen Stundenplan alle zwei Stunden vom Uni-Server' + (at ? " (zuletzt " + esc(ago(Date.parse(at))) + ")" : "") + ". Die App gleicht bei jedem Öffnen ab.</p>";
+    h += '<div class="inline"><button class="btn small" data-act="gh-sync"' + (gh.busy ? " disabled" : "") + ">" + (gh.busy ? "Gleicht ab …" : "Jetzt abgleichen") + '</button><button class="btn small" data-act="gh-passform">Anderes Passwort eingeben</button></div>';
+    if (ui.ghPassForm) h += ghPassForm();
+    return h + "</div></div>";
+  }
+  if (st === "needpass" || st === "badpass") {
+    h += '<div class="card"><p>Auf dieser Seite liegt dein verschlüsselter Stundenplan' + (gh.at ? " (Stand " + esc(ago(Date.parse(gh.at))) + ")" : "") + ". Gib einmal das Passwort ein, das du bei GitHub als <code>UNIKAL_PASSWORT</code> hinterlegt hast.</p>";
+    h += ghPassForm() + "</div></div>";
+    return h;
+  }
+  // Noch nicht eingerichtet
+  h += '<p class="hint">' + (onGithubPages ? (ghSrc ? "Auf GitHub liegt gerade kein Stundenplan. Prüfe die Secrets und die GitHub-Aktion (Anleitung unten)." : "Auf dieser Seite liegt noch kein Stundenplan. Nach der Einrichtung (unten) holt") : "Diese Funktion arbeitet, sobald die App über GitHub Pages veröffentlicht ist. Dann holt") + (onGithubPages && ghSrc ? "" : " GitHub deinen Stundenplan alle zwei Stunden vom Uni-Server und legt ihn verschlüsselt hier ab. Dein iPhone bleibt so von selbst aktuell, wie bei Studo.") + "</p>";
+  if (gh.err) h += '<p class="err">' + esc(gh.err) + "</p>";
+  h += '<details class="help" id="gh-help"' + (gh.newPass || (onGithubPages && !ghSrc) ? " open" : "") + '><summary>So richtest du das ein (einmalig, ca. 5 Minuten)</summary><div><ul>';
+  h += '<li><b>Passwort erzeugen:</b> <button class="btn small" data-act="gh-gen">Sicheres Passwort erzeugen</button>' + (gh.newPass ? '<div class="inline" style="margin-top:8px"><code id="gh-newpass">' + esc(gh.newPass) + '</code><button class="btn small" data-act="gh-copy">Kopieren</button></div><span class="hint">Bewahre es gut auf, etwa im Passwort-Manager. Du brauchst es gleich bei GitHub und einmal auf jedem Gerät.</span>' : "") + "</li>";
+  h += "<li>Auf github.com in deinem Repository: <i>Settings → Secrets and variables → Actions → New repository secret</i>. Name <code>UNIKAL_PASSWORT</code>, als Wert das Passwort.</li>";
+  h += "<li>Ein zweites Secret: Name <code>UNIKAL_ICAL_URL</code>, als Wert dein iCal-Link aus dem Uni-System.</li>";
+  h += "<li><i>Actions → Uni-Kalender veröffentlichen → Run workflow</i>. Nach etwa einer Minute hier auf „Jetzt abgleichen“ tippen, dann das Passwort eingeben.</li></ul>";
+  h += '<div class="inline"><button class="btn small" data-act="gh-sync"' + (gh.busy ? " disabled" : "") + ">" + (gh.busy ? "Suche …" : "Jetzt abgleichen") + "</button></div></div></details></div>";
+  return h;
+}
+function ghPassForm() {
+  return '<form id="gh-form" class="section" autocomplete="off">' +
+    (gh.status === "ok" ? '<p class="hint">Neues Passwort? Erst bei GitHub das Secret <code>UNIKAL_PASSWORT</code> ändern und <i>Actions → Uni-Kalender veröffentlichen → Run workflow</i> starten. Danach hier das neue Passwort eingeben.</p>' : "") +
+    '<label class="f">Passwort<input class="in" id="gh-pass" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="xxxx-xxxx-xxxx-xxxx-xxxx-xxxx"></label>' +
+    (gh.err && (gh.status === "badpass" || ui.ghPassForm) ? '<p class="err">' + esc(gh.err) + "</p>" : "") +
+    '<div class="inline"><button class="btn primary" type="submit"' + (gh.busy ? " disabled" : "") + ">" + (gh.busy ? "Entschlüssele …" : "Entschlüsseln und laden") + "</button></div></form>";
+}
+
+const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const isStandalone = navigator.standalone === true || (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches);
 
 /* =====================================================================
    6. Sichern, Wiederherstellen, Exportieren
@@ -1152,8 +1275,17 @@ function nextLineHtml() {
   return parts.join("");
 }
 
-function render() {
+function render(opts) {
   const view = document.getElementById("view");
+  const soft = !!(opts && opts.soft);
+  const typed = {};
+  let focusId = null;
+  if (soft) {
+    for (const el of view.querySelectorAll("input[id], textarea[id], select[id]")) if (el.type !== "file") typed[el.id] = el.type === "checkbox" ? el.checked : el.value;
+    const a = document.activeElement;
+    if (a && a.id && view.contains(a)) focusId = a.id;
+    for (const d of view.querySelectorAll("details[id]")) typed["details:" + d.id] = d.open;
+  }
   const prevScroll = view.querySelector(".scroller");
   const keep = prevScroll ? { tab: view.dataset.tab, key: view.dataset.key, top: prevScroll.scrollTop } : null;
   for (const t of document.querySelectorAll(".tab")) t.setAttribute("aria-current", t.dataset.tab === ui.tab ? "page" : "false");
@@ -1168,6 +1300,14 @@ function render() {
   else if (ui.tab === "courses") html = renderCourses();
   else html = renderSources();
   view.innerHTML = html;
+  if (soft) {
+    for (const key in typed) {
+      if (key.startsWith("details:")) { const d = document.getElementById(key.slice(8)); if (d) d.open = typed[key]; continue; }
+      const el = document.getElementById(key); if (!el || !view.contains(el)) continue;
+      if (el.type === "checkbox") el.checked = typed[key]; else el.value = typed[key];
+    }
+    if (focusId) { const el = document.getElementById(focusId); if (el) el.focus(); }
+  }
   view.dataset.tab = ui.tab;
   view.dataset.key = ui.tab === "cal" ? ui.view + ":" + ui.cursor : ui.tab;
   const sc = view.querySelector(".scroller");
@@ -1221,7 +1361,12 @@ function renderCal() {
   const nl = nextLineHtml();
   if (nl && ui.view !== "list") h += '<div class="nl-wrap">' + nl + "</div>";
   h += "</header>";
-  if (demoActive()) h += '<div class="banner"><p><b>Beispiel-Stundenplan.</b> So sieht dein Semester aus, sobald du deinen Kalender aus dem Uni-System importierst.</p><button class="btn small primary" data-act="goto" data-tab="sources">Eigenen Kalender holen</button><button class="btn small" data-act="demo-off">Ausblenden</button></div>';
+  const ghWaiting = canGh && (gh.status === "needpass" || gh.status === "badpass") && (demoActive() || state.sources.some(s => s.kind === "gh"));
+  const ghSrc = state.sources.find(s => s.kind === "gh");
+  const ghStale = ghSrc && ghSrc.remoteAt && Date.now() - Date.parse(ghSrc.remoteAt) > 2 * DAY;
+  if (ghWaiting) h += '<div class="banner"><p><b>Dein Stundenplan liegt bereit.</b> Gib einmal das Passwort ein, dann aktualisiert er sich von selbst.</p><button class="btn small primary" data-act="goto" data-tab="sources">Passwort eingeben</button>' + (demoActive() ? '<button class="btn small" data-act="demo-off">Ausblenden</button>' : "") + "</div>";
+  else if (ghStale && !ui.staleHidden) h += '<div class="banner"><p><b>Stundenplan nicht aktuell.</b> GitHub hat ihn zuletzt ' + esc(ago(Date.parse(ghSrc.remoteAt))) + ' geholt. Unter „Quellen“ steht, was zu tun ist.</p><button class="btn small primary" data-act="goto" data-tab="sources">Ansehen</button><button class="btn small" data-act="stale-hide">Ausblenden</button></div>';
+  else if (demoActive()) h += '<div class="banner"><p><b>Beispiel-Stundenplan.</b> So sieht dein Semester aus, sobald du deinen Kalender aus dem Uni-System importierst.</p><button class="btn small primary" data-act="goto" data-tab="sources">Eigenen Kalender holen</button><button class="btn small" data-act="demo-off">Ausblenden</button></div>';
   h += '<div class="view-wrap"><div class="scroller" id="scroller">';
   h += ui.view === "list" ? renderList() : renderGrid();
   h += '</div><button class="fab" data-act="new-event" aria-label="Neuer Termin">' + ICON.plus + "</button></div>";
@@ -1434,23 +1579,26 @@ function renderCourses() {
 function renderSources() {
   const s = state.settings;
   let h = '<header class="top"><h1 class="page-title">Quellen</h1></header><div class="scroller"><div class="page">';
+  if (isIOS && !isStandalone && canGh) h += '<div class="card"><p><b>Am iPhone als App nutzen:</b> In Safari auf <b>•••</b> (oder das Teilen-Symbol) tippen, dann <i>Teilen</i> → „Zu Home-Bildschirm hinzufügen“. „Als Web-App öffnen“ eingeschaltet lassen und auf „Hinzufügen“ tippen.</p><p class="hint">Öffne die App danach über das neue Symbol, beim ersten Mal mit Internet, und richte sie dort ein. Sie hat eigene Daten, getrennt von diesem Safari-Tab.</p></div>';
   h += '<div class="section"><h2>Deine Kalender</h2>';
   if (!state.sources.length) h += '<p class="hint">Noch nichts importiert. Am besten holst du dir den iCal-Link deines Stundenplans aus dem Uni-System (Anleitung unten).</p>';
   else {
     h += '<div class="items">';
     for (const src of state.sources) {
-      const busy = syncing.has(src.id);
-      h += '<div class="item"><div class="grow"><b>' + esc(src.name || "Kalender") + '</b><span class="meta"><span>' + (src.kind === "url" ? "Abo-Link" : "Datei") + '</span><span class="num">· ' + (src.count || 0) + " Termine</span><span>· " + (busy ? "lädt …" : "aktualisiert " + esc(ago(src.lastSync))) + "</span></span>" + (src.lastError ? '<span class="err">' + esc(src.lastError) + "</span>" : "") + "</div>";
+      const busy = syncing.has(src.id) || (src.kind === "gh" && gh.busy);
+      h += '<div class="item"><div class="grow"><b>' + esc(src.name || "Kalender") + '</b><span class="meta"><span>' + (src.kind === "url" ? "Abo-Link" : src.kind === "gh" ? "automatisch über GitHub" : "Datei") + '</span><span class="num">· ' + (+src.count || 0) + " Termine</span><span>· " + (busy ? "lädt …" : src.kind === "gh" && src.remoteAt ? "Stand " + esc(ago(Date.parse(src.remoteAt))) : "aktualisiert " + esc(ago(src.lastSync))) + "</span></span>" + (src.lastError ? '<span class="err">' + esc(src.lastError) + "</span>" : "") + "</div>";
       h += '<div class="inline">';
-      if (src.kind === "url") h += '<button class="btn small" data-act="sync" data-id="' + src.id + '"' + (busy ? " disabled" : "") + ">Aktualisieren</button>";
-      h += '<label class="btn small">Datei …<input type="file" class="vh" accept=".ics,.ical,.ifb,text/calendar" data-reimport="' + src.id + '"></label>';
-      h += '<button class="btn small icon danger" aria-label="Quelle entfernen" data-act="src-del" data-id="' + src.id + '">' + ICON.trash + "</button></div></div>";
+      if (src.kind === "url") h += '<button class="btn small" data-act="sync" data-id="' + esc(src.id) + '"' + (busy ? " disabled" : "") + ">Aktualisieren</button>";
+      if (src.kind === "gh" && canGh) h += '<button class="btn small" data-act="gh-sync"' + (busy ? " disabled" : "") + ">Aktualisieren</button>";
+      else h += '<label class="btn small">Datei …<input type="file" class="vh" accept=".ics,.ical,.ifb,text/calendar" data-reimport="' + esc(src.id) + '"></label>';
+      h += '<button class="btn small icon danger" aria-label="Quelle entfernen" data-act="src-del" data-id="' + esc(src.id) + '">' + ICON.trash + "</button></div></div>";
     }
     h += "</div>";
   }
   h += "</div>";
 
-  h += '<div class="section"><h2>Kalender-Link abonnieren</h2><p class="hint">Mit einem Abo-Link aktualisiert sich der Stundenplan bei jedem Öffnen, wie bei Studo.</p>';
+  if (canGh) h += renderGhSection();
+  h += '<div class="section"><h2>Kalender-Link abonnieren</h2><p class="hint">Mit einem Abo-Link aktualisiert sich der Stundenplan bei jedem Öffnen, wie bei Studo.' + (onGithubPages ? " Die meisten Uni-Server blockieren diesen Weg allerdings für Webseiten. Dann nimm „Automatisch über GitHub“." : "") + "</p>";
   h += '<form class="card" id="src-form"><div class="frow"><label class="f">Name<input class="in" id="sf-name" placeholder="z. B. Stundenplan Uni" autocomplete="off"></label>';
   h += '<label class="f" style="grid-column:1/-1">iCal-Link (https:// oder webcal://)<input class="in" id="sf-url" type="url" required placeholder="https://online.uni.ac.at/…/ical?…" autocomplete="off" spellcheck="false"></label></div>';
   h += '<div class="inline"><button class="btn primary" type="submit">Hinzufügen und laden</button></div></form></div>';
@@ -1605,6 +1753,7 @@ function onClick(ev) {
     case "pick": ui.cursor = +el.dataset.d; render(); break;
     case "pick-day": ui.cursor = +el.dataset.d; ui.view = "day"; saveUi(); render(); break;
     case "demo-off": state.settings.demoOff = true; Store.save("meta"); render(); break;
+    case "stale-hide": ui.staleHidden = true; render(); break;
     case "open": openSheet({ type: "event", id: el.dataset.id }); break;
     case "close": case "close-overlay": closeSheet(); break;
     case "new-event": openSheet({ type: "edit", data: newEventDraft() }); break;
@@ -1669,14 +1818,25 @@ function onClick(ev) {
     case "course-toggle": { const k = el.dataset.k; const c = Object.assign({}, state.courses[k]); c.hidden = !c.hidden; state.courses[k] = c; if (!demoActive()) Store.save("meta"); render(); break; }
     case "unhide-all": state.hidden = {}; Store.save("meta"); render(); toast("Alle Termine sind wieder sichtbar."); break;
     case "sync": { const src = state.sources.find(s => s.id === el.dataset.id); if (src) syncSource(src, false); break; }
+    case "gh-sync": ghSync(false); break;
+    case "gh-gen": gh.newPass = genPassphrase(); render(); break;
+    case "gh-passform": ui.ghPassForm = !ui.ghPassForm; render(); break;
+    case "gh-copy": {
+      const txt = gh.newPass;
+      const fallback = () => { const c = document.getElementById("gh-newpass"); if (c) { const r = document.createRange(); r.selectNodeContents(c); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); } toast("Markiert. Jetzt kopieren."); };
+      try { navigator.clipboard.writeText(txt).then(() => toast("Passwort kopiert."), fallback); } catch (e) { fallback(); }
+      break;
+    }
     case "src-del": {
       const idx = state.sources.findIndex(s => s.id === el.dataset.id);
       if (idx < 0) break;
       const [src] = state.sources.splice(idx, 1);
       const evs = state.events[src.id];
       delete state.events[src.id];
+      const pass = src.kind === "gh" ? lsGet("ghpass") : null;
+      if (src.kind === "gh") { lsDel("ghpass"); if (gh.status === "ok") gh.status = "needpass"; }
       Store.remove("src." + src.id); Store.save("meta"); render();
-      toast("„" + (src.name || "Kalender") + "“ entfernt.", { label: "Rückgängig", run: () => { state.sources.splice(idx, 0, src); state.events[src.id] = evs; Store.save("src." + src.id); Store.save("meta"); render(); } });
+      toast("„" + (src.name || "Kalender") + "“ entfernt.", { label: "Rückgängig", run: () => { state.sources.splice(idx, 0, src); state.events[src.id] = evs; if (pass) { lsSet("ghpass", pass); gh.status = "ok"; } Store.save("src." + src.id); Store.save("meta"); render(); } });
       break;
     }
     case "backup": exportBackup(); break;
@@ -1687,6 +1847,8 @@ function onClick(ev) {
     case "wipe-yes": {
       for (const src of state.sources) Store.remove("src." + src.id);
       state = freshState(); state.settings.demoOff = true;
+      lsDel("ghpass"); ghKey = null;
+      if (gh.status === "ok" || gh.status === "badpass") gh.status = "needpass";
       Store.save("meta"); ui.confirmWipe = false; render(); toast("Alle Daten gelöscht.");
       break;
     }
@@ -1734,6 +1896,10 @@ function onSubmit(ev) {
     Store.save("meta");
     render();
     setTimeout(() => { const i = document.getElementById("tf-title"); if (i) i.focus(); }, 0);
+  } else if (f.id === "gh-form") {
+    ev.preventDefault();
+    const pass = (document.getElementById("gh-pass").value || "").trim();
+    if (pass) ghSync(false, pass);
   } else if (f.id === "src-form") {
     ev.preventDefault();
     const url = document.getElementById("sf-url").value.trim();
@@ -1743,6 +1909,7 @@ function onSubmit(ev) {
     leaveDemo();
     state.sources.push(src);
     Store.save("meta");
+    f.reset();
     syncSource(src, false);
   }
 }
@@ -1820,19 +1987,20 @@ setInterval(() => {
   const a = document.activeElement;
   if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return;
   if (startOfDay(Date.now()) !== lastDay) { lastDay = startOfDay(Date.now()); }
-  if (ui.tab === "cal") render();
+  if (ui.tab === "cal") render({ soft: true });
 }, 60000);
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) return;
   Store.refreshFromCloud();
   autoSync();
-  if (!sheet) render();
+  if (!sheet) render({ soft: true });
 });
 
 /* Als App installierbar machen (nur in der eigenständigen Version) */
 if (!inArtifact && /^https?:$/.test(location.protocol) && window.top === window.self) {
   const l = document.createElement("link"); l.rel = "manifest"; l.href = "manifest.webmanifest"; document.head.appendChild(l);
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+  if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
 }
 
 afterLoad();

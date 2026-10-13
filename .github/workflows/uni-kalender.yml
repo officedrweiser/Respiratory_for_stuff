@@ -1,0 +1,142 @@
+# Veröffentlicht den Uni-Kalender auf GitHub Pages.
+# Wenn die Secrets UNIKAL_ICAL_URL und UNIKAL_PASSWORT gesetzt sind, holt der Ablauf
+# außerdem alle zwei Stunden den Stundenplan vom Uni-Server und legt ihn verschlüsselt
+# neben die App (uni-kalender/daten/stundenplan.json). Im Klartext landet er nirgends.
+name: Uni-Kalender veröffentlichen
+
+on:
+  push:
+    paths:
+      - "uni-kalender/**"
+      - ".github/workflows/uni-kalender.yml"
+      - ".github/scripts/stundenplan-verschluesseln.mjs"
+  schedule:
+    - cron: "17 */2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: uni-kalender-pages-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  bauen:
+    # Nur der Hauptzweig darf veröffentlichen; Läufe auf anderen Zweigen werden übersprungen.
+    if: github.event_name == 'schedule' || github.ref_name == github.event.repository.default_branch
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      ok: ${{ steps.pages.outputs.ok }}
+      fehler: ${{ steps.stundenplan.outputs.fehler }}
+    steps:
+      - name: Ist GitHub Pages mit der Quelle „GitHub Actions“ eingeschaltet?
+        id: pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if info=$(gh api "repos/${GITHUB_REPOSITORY}/pages" 2>/dev/null); then
+            typ=$(jq -r '.build_type // ""' <<<"$info")
+            url=$(jq -r '.html_url // ""' <<<"$info")
+            if [ "$typ" = "workflow" ]; then
+              echo "ok=true" >> "$GITHUB_OUTPUT"
+              echo "url=$url" >> "$GITHUB_OUTPUT"
+              echo "GitHub Pages ist bereit: $url"
+              exit 0
+            fi
+            echo "::warning title=GitHub Pages::Pages ist eingeschaltet, aber nicht mit „GitHub Actions“. Unter Settings → Pages → Source „GitHub Actions“ wählen und diesen Ablauf erneut starten."
+          else
+            echo "::notice title=GitHub Pages::GitHub Pages ist noch nicht eingeschaltet. Unter Settings → Pages → Source „GitHub Actions“ wählen und diesen Ablauf erneut starten."
+          fi
+          echo "ok=false" >> "$GITHUB_OUTPUT"
+
+      - name: Dateien holen
+        if: steps.pages.outputs.ok == 'true'
+        uses: actions/checkout@v6
+
+      - name: Seite zusammenstellen
+        if: steps.pages.outputs.ok == 'true'
+        run: |
+          mkdir -p _site/uni-kalender/daten
+          cp uni-kalender/index.html uni-kalender/sw.js uni-kalender/manifest.webmanifest \
+             uni-kalender/icon.svg uni-kalender/icon-180.png uni-kalender/icon-192.png uni-kalender/icon-512.png \
+             _site/uni-kalender/
+          cat > _site/index.html <<'HTML'
+          <!doctype html>
+          <html lang="de"><head><meta charset="utf-8"><title>Mein Uni-Kalender</title>
+          <meta http-equiv="refresh" content="0; url=uni-kalender/"></head>
+          <body><a href="uni-kalender/">Zum Uni-Kalender</a></body></html>
+          HTML
+
+      - name: Stundenplan holen und verschlüsseln
+        id: stundenplan
+        if: steps.pages.outputs.ok == 'true'
+        env:
+          UNIKAL_ICAL_URL: ${{ secrets.UNIKAL_ICAL_URL }}
+          UNIKAL_PASSWORT: ${{ secrets.UNIKAL_PASSWORT }}
+          SEITE: ${{ steps.pages.outputs.url }}
+        run: |
+          ziel=_site/uni-kalender/daten/stundenplan.json
+          if [ -z "$UNIKAL_ICAL_URL" ] && [ -z "$UNIKAL_PASSWORT" ]; then
+            echo "::notice title=Stundenplan::Kein automatischer Abgleich eingerichtet (Secrets UNIKAL_ICAL_URL und UNIKAL_PASSWORT fehlen). Die App wird trotzdem veröffentlicht."
+            exit 0
+          fi
+          link="${UNIKAL_ICAL_URL/#webcal:\/\//https://}"
+          [ -n "$link" ] && echo "::add-mask::$link"
+          # -s ohne -S: curl gibt bei Fehlern nichts aus, damit Teile des Links nicht im Protokoll landen.
+          if [ -z "$link" ]; then
+            echo "fehler=Das Secret UNIKAL_ICAL_URL fehlt (Name genau so geschrieben?)." >> "$GITHUB_OUTPUT"
+          elif ! curl -fsL --retry 3 --retry-delay 10 --max-time 90 -A "Mein-Uni-Kalender (GitHub Actions)" \
+                 -o "$RUNNER_TEMP/stundenplan.ics" "$link"; then
+            echo "fehler=Der Stundenplan konnte nicht vom Uni-Server geholt werden. Ist der Link in UNIKAL_ICAL_URL noch gültig?" >> "$GITHUB_OUTPUT"
+          elif ! node .github/scripts/stundenplan-verschluesseln.mjs "$RUNNER_TEMP/stundenplan.ics" "$ziel"; then
+            echo "fehler=Der Stundenplan wurde geholt, konnte aber nicht verschlüsselt werden. Die genaue Ursache steht im Schritt „Stundenplan holen und verschlüsseln“." >> "$GITHUB_OUTPUT"
+          else
+            exit 0
+          fi
+          rm -f "$RUNNER_TEMP/stundenplan.ics"
+          # Den zuletzt veröffentlichten Stand behalten, damit die App weiter Daten findet.
+          code=000
+          if [ -n "$SEITE" ]; then
+            code=$(curl -sL --retry 3 --retry-delay 5 --max-time 30 -o "$ziel" -w '%{http_code}' \
+                   "${SEITE%/}/uni-kalender/daten/stundenplan.json") || true
+          fi
+          if [ "$code" = 200 ]; then
+            echo "Letzter Stand bleibt veröffentlicht."
+          elif [ "$code" = 404 ] || [ -z "$SEITE" ]; then
+            rm -f "$ziel"
+          else
+            rm -f "$ziel"
+            echo "::error title=Stundenplan::Der letzte Stand war nicht abrufbar (HTTP $code). Diesmal wird nichts veröffentlicht, damit er online bleibt."
+            exit 1
+          fi
+
+      - name: Seite für GitHub Pages verpacken
+        if: steps.pages.outputs.ok == 'true'
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
+
+  veroeffentlichen:
+    needs: bauen
+    if: needs.bauen.outputs.ok == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Auf GitHub Pages veröffentlichen
+        id: deploy
+        uses: actions/deploy-pages@v5
+
+      - name: Fehler beim Abgleich melden
+        if: needs.bauen.outputs.fehler != ''
+        env:
+          FEHLER: ${{ needs.bauen.outputs.fehler }}
+        run: |
+          echo "::error title=Stundenplan::$FEHLER"
+          exit 1
