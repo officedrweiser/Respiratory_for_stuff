@@ -1,30 +1,42 @@
 # E-Mail-Signatur – Kanzlei Dr. Martin Weiser
 
-Zentriert, mit langem rotem Strich und den Kontakt-Symbolen der Website.
-Die Schrift ist **Courier New**.
-Logo und Schriftzug sehen aus wie auf www.drweiser.at, nur ohne den Hintergrund.
+Zentriert, in **Courier New**, mit langem rotem Strich und den Kontakt-Symbolen der Website.
+Es gibt zwei Fassungen zur Auswahl.
 
-![Vorschau der Signatur](vorschau.png)
+**A – Logo wie auf der Website** (Name in den Website-Schriften, als Bild)
+
+![Fassung A](vorschau-A.png)
+
+**B – alles in Courier New** (rotes MW-Zeichen, Name als Text in Courier New)
+
+![Fassung B](vorschau-B.png)
+
+Bei Fassung B ist der Name echter Text und kein Bild.
+Er erscheint daher immer, auch wenn ein Mailprogramm Bilder blockiert, und passt sich im Dunkelmodus an.
 
 ## Dateien
 
 | Datei | Wofür |
 | --- | --- |
-| `Signatur-Kanzlei-Weiser.zip` | **Alles zum Herunterladen in einer Datei**, mit dem Inhalt unten |
+| `Signatur-A-Logo-wie-Website.zip` | Fassung A zum Herunterladen |
+| `Signatur-B-alles-Courier-New.zip` | Fassung B zum Herunterladen |
+| `A-logo-wie-website/`, `B-alles-courier-new/` | Inhalt der beiden ZIP-Dateien |
+
+Jede ZIP-Datei enthält:
+
+| Datei | Wofür |
+| --- | --- |
 | `Kanzlei.htm` | die Signatur für Outlook, braucht den Ordner `bilder` daneben |
-| `bilder/` | Logo und Symbole (Telefon, Fax, Adresse, E-Mail, Web) |
+| `bilder/` | Logo bzw. MW-Zeichen und Symbole |
 | `Kanzlei.txt` | Textfassung für E-Mails im Nur-Text-Format (nur für Plan B nötig) |
 | `signatur-komplett.html` | dieselbe Signatur mit eingebauten Bildern, zum Ansehen und für den Mac |
-| `vorschau.png` | Vorschau |
-
-## Warum der Weg über Word
-
-Kopiert man aus dem Browser, nimmt Outlook die Bilder nicht mit, also weder das Logo noch die Symbole.
-Öffnet man die Signatur dagegen in Word und kopiert sie von dort, kommen alle Bilder mit.
 
 ## Einrichten im klassischen Outlook (oben links gibt es „Datei“)
 
-1. `Signatur-Kanzlei-Weiser.zip` herunterladen.
+Die Schritte sind für beide Fassungen gleich.
+Kopiert wird über Word, weil Outlook aus dem Browser keine Bilder mitnimmt.
+
+1. Die ZIP-Datei der gewünschten Fassung herunterladen.
    Dann mit Rechtsklick → **Alle extrahieren…** → **Extrahieren** entpacken.
 2. Im entpackten Ordner mit Rechtsklick auf `Kanzlei.htm` → **Öffnen mit** → **Word** gehen.
    Steht Word nicht in der Liste: **Andere App auswählen** → **Word**.
@@ -44,7 +56,6 @@ Nur nötig, falls die Bilder auch über Word nicht mitkommen.
 
 1. Outlook schließen.
 2. **Windows-Taste + R** drücken, `%APPDATA%\Microsoft\Signatures` eingeben und **OK** klicken.
-   Der Signaturen-Ordner von Outlook öffnet sich.
 3. Aus dem entpackten Ordner `Kanzlei.htm`, `Kanzlei.txt` und den Ordner `bilder` hineinkopieren.
    Fragt Windows nach dem Ersetzen, **Ersetzen** wählen.
 4. Outlook starten und unter **Datei → Optionen → E-Mail → Signaturen…** „Kanzlei“ als Standard auswählen.
@@ -66,11 +77,8 @@ Den Weg über Word bietet das neue Outlook nicht. Bitte kurz Bescheid geben, dan
 
 - Die Symbole sind die der Website (Telefon, Adresse, E-Mail).
   Für Fax und Website gibt es dort keine eigenen Symbole, deshalb sind Drucker und Globus im selben Stil ergänzt.
-  Die Website nutzt für Fax den Briefumschlag.
 - Telefonnummer, E-Mail-Adresse und Website sind verlinkt.
 - Die Website-Links führen auf https://drweiser.at ohne „www“, angezeigt wird aber „www.drweiser.at“.
   Das Sicherheitszertifikat der Website gilt nämlich nur für drweiser.at.
-- Im Dunkelmodus steht das Logo auf einer weißen Fläche und bleibt so gut lesbar.
-  Am Handy bleiben die Symbole bei ihrem Text.
-- Die Vorschau entstand mit einer Ersatzschrift, die Courier New sehr ähnlich ist.
+- Die Vorschauen entstanden mit einer Ersatzschrift, die Courier New sehr ähnlich ist.
   In Outlook erscheint die echte Courier New.
