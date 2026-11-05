@@ -7,9 +7,8 @@ Logo und Schriftzug sehen aus wie auf www.drweiser.at, nur ohne den Hintergrund.
 
 ## Was ist neu
 
-- Das rote „MW“-Logo mit dem Schriftzug „Dr. Martin Weiser“ wie auf der Website.
+- Das rote „MW“-Logo mit dem Schriftzug „Dr. Martin Weiser / Rechtsanwalt“ genau wie auf der Website.
   Verwendet werden das Original-Logo und die Website-Schriften (Playfair Display, Inter).
-  „Mediator“ steht jetzt mit im Schriftzug.
 - Die Telefonnummern stehen so wie auf der Website da: +43 (0)1/205 1003
 - Die Signatur ist linksbündig, klarer gegliedert und hat kleine Akzente im Kanzlei-Rot.
 - Telefonnummer, E-Mail-Adresse und Website lassen sich anklicken. Am Handy ruft ein Antippen an.
