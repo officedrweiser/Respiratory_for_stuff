@@ -1,6 +1,7 @@
 # E-Mail-Signatur – Kanzlei Dr. Martin Weiser
 
 Zentriert, in **Courier New**, mit langem rotem Strich und den Kontakt-Symbolen der Website.
+Darunter steht linksbündig der Hinweistext („Wichtiger Hinweis“, „Important Note“, „Hinweis DSGVO“).
 Es gibt zwei Fassungen zur Auswahl.
 
 **A – Logo wie auf der Website** (Name in den Website-Schriften, als Bild)
@@ -75,6 +76,8 @@ Den Weg über Word bietet das neue Outlook nicht. Bitte kurz Bescheid geben, dan
 
 ## Gut zu wissen
 
+- Der Hinweistext ist wortgleich übernommen.
+  Er ist in Courier New 9 pt und Dunkelgrau gesetzt, die drei Überschriften sind fett.
 - Die Symbole sind die der Website (Telefon, Adresse, E-Mail).
   Für Fax und Website gibt es dort keine eigenen Symbole, deshalb sind Drucker und Globus im selben Stil ergänzt.
 - Telefonnummer, E-Mail-Adresse und Website sind verlinkt.
