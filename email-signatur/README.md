@@ -1,7 +1,7 @@
 # E-Mail-Signatur – Kanzlei Dr. Martin Weiser
 
 Zentriert, mit langem rotem Strich und den Kontakt-Symbolen der Website.
-Die Schrift bleibt **Consolas** wie bisher.
+Die Schrift ist **Courier New**.
 Logo und Schriftzug sehen aus wie auf www.drweiser.at, nur ohne den Hintergrund.
 
 ![Vorschau der Signatur](vorschau.png)
@@ -72,5 +72,5 @@ Den Weg über Word bietet das neue Outlook nicht. Bitte kurz Bescheid geben, dan
   Das Sicherheitszertifikat der Website gilt nämlich nur für drweiser.at.
 - Im Dunkelmodus steht das Logo auf einer weißen Fläche und bleibt so gut lesbar.
   Am Handy bleiben die Symbole bei ihrem Text.
-- Die Vorschau entstand mit einer Ersatzschrift, die Consolas sehr ähnlich ist.
-  In Outlook erscheint die echte Consolas.
+- Die Vorschau entstand mit einer Ersatzschrift, die Courier New sehr ähnlich ist.
+  In Outlook erscheint die echte Courier New.
