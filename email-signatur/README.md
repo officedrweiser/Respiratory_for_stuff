@@ -1,19 +1,24 @@
 # E-Mail-Signatur – Kanzlei Dr. Martin Weiser
 
 Zentriert, in **Courier New**, mit langem rotem Strich und den Kontakt-Symbolen der Website.
-Darunter steht linksbündig der Hinweistext („Wichtiger Hinweis“, „Important Note“, „Hinweis DSGVO“).
-Es gibt zwei Fassungen zur Auswahl.
+Darunter steht linksbündig der Hinweistext („Wichtiger Hinweis“, „Important Note“, „Hinweis DSGVO“) in **Calibri**, klein und grau.
+Die vier Fassungen unterscheiden sich nur im Logo.
 
 **A – Logo wie auf der Website** (Name in den Website-Schriften, als Bild)
 
 ![Fassung A](vorschau-A.png)
 
-**B – alles in Courier New** (rotes MW-Zeichen, Name als Text in Courier New)
+**B – Name in Courier New** (rotes MW-Zeichen, Name als Text)
 
 ![Fassung B](vorschau-B.png)
 
-Bei Fassung B ist der Name echter Text und kein Bild.
-Er erscheint daher immer, auch wenn ein Mailprogramm Bilder blockiert, und passt sich im Dunkelmodus an.
+**C – Name in Calisto MT** (rotes MW-Zeichen, Name als Text)
+
+![Fassung C](vorschau-C.png)
+
+**D – Name in Calisto MT kursiv** (rotes MW-Zeichen, Name als Text)
+
+![Fassung D](vorschau-D.png)
 
 ## Dateien
 
@@ -21,7 +26,9 @@ Er erscheint daher immer, auch wenn ein Mailprogramm Bilder blockiert, und passt
 | --- | --- |
 | `Signatur-A-Logo-wie-Website.zip` | Fassung A zum Herunterladen |
 | `Signatur-B-alles-Courier-New.zip` | Fassung B zum Herunterladen |
-| `A-logo-wie-website/`, `B-alles-courier-new/` | Inhalt der beiden ZIP-Dateien |
+| `Signatur-C-Calisto-MT.zip` | Fassung C zum Herunterladen |
+| `Signatur-D-Calisto-MT-kursiv.zip` | Fassung D zum Herunterladen |
+| `A-…/`, `B-…/`, `C-…/`, `D-…/` | Inhalt der ZIP-Dateien |
 
 Jede ZIP-Datei enthält:
 
@@ -34,7 +41,7 @@ Jede ZIP-Datei enthält:
 
 ## Einrichten im klassischen Outlook (oben links gibt es „Datei“)
 
-Die Schritte sind für beide Fassungen gleich.
+Die Schritte sind für alle Fassungen gleich.
 Kopiert wird über Word, weil Outlook aus dem Browser keine Bilder mitnimmt.
 
 1. Die ZIP-Datei der gewünschten Fassung herunterladen.
@@ -76,12 +83,14 @@ Den Weg über Word bietet das neue Outlook nicht. Bitte kurz Bescheid geben, dan
 
 ## Gut zu wissen
 
+- **Calisto MT** (Fassungen C und D) wird mit Microsoft Office installiert.
+  Wer die Schrift nicht hat, z. B. am iPhone, sieht eine ähnliche Schrift (Book Antiqua, Palatino oder Georgia).
 - Der Hinweistext ist wortgleich übernommen.
-  Er ist in Courier New 9 pt und Dunkelgrau gesetzt, die drei Überschriften sind fett.
+  Er steht in Calibri 9 pt in Dunkelgrau, die drei Überschriften sind fett.
 - Die Symbole sind die der Website (Telefon, Adresse, E-Mail).
   Für Fax und Website gibt es dort keine eigenen Symbole, deshalb sind Drucker und Globus im selben Stil ergänzt.
 - Telefonnummer, E-Mail-Adresse und Website sind verlinkt.
 - Die Website-Links führen auf https://drweiser.at ohne „www“, angezeigt wird aber „www.drweiser.at“.
   Das Sicherheitszertifikat der Website gilt nämlich nur für drweiser.at.
-- Die Vorschauen entstanden mit einer Ersatzschrift, die Courier New sehr ähnlich ist.
-  In Outlook erscheint die echte Courier New.
+- Die Vorschauen entstanden mit Ersatzschriften, die Courier New, Calisto MT und Calibri sehr ähnlich sehen.
+  In Outlook erscheinen die echten Schriften.
