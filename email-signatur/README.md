@@ -28,6 +28,14 @@ Die Fassungen unterscheiden sich nur im Logo.
 
 ![Fassung F](vorschau-F.png)
 
+**G – wie E, Name in Großbuchstaben** („DR. MARTIN WEISER“, „RECHTSANWALT“ gleich lang)
+
+![Fassung G](vorschau-G.png)
+
+**H – wie F, Name in Großbuchstaben und kursiv**
+
+![Fassung H](vorschau-H.png)
+
 ## Dateien
 
 | Datei | Wofür |
@@ -38,7 +46,9 @@ Die Fassungen unterscheiden sich nur im Logo.
 | `Signatur-D-Calisto-MT-kursiv.zip` | Fassung D zum Herunterladen |
 | `Signatur-E-Calisto-MT-gesperrt.zip` | Fassung E zum Herunterladen |
 | `Signatur-F-Calisto-MT-kursiv-gesperrt.zip` | Fassung F zum Herunterladen |
-| `A-…/` bis `F-…/` | Inhalt der ZIP-Dateien |
+| `Signatur-G-Calisto-MT-gross-gesperrt.zip` | Fassung G zum Herunterladen |
+| `Signatur-H-Calisto-MT-gross-kursiv-gesperrt.zip` | Fassung H zum Herunterladen |
+| `A-…/` bis `H-…/` | Inhalt der ZIP-Dateien |
 
 Jede ZIP-Datei enthält:
 
@@ -68,7 +78,7 @@ Kopiert wird über Word, weil Outlook aus dem Browser keine Bilder mitnimmt.
 7. Rechts bei **Neue Nachrichten** und **Antworten/Weiterleitungen** jeweils „Kanzlei“ auswählen und mit **OK** bestätigen.
 8. Eine Testmail an die eigene Adresse und ans Handy schicken.
 
-**Nur bei Fassung E und F:** Reicht „RECHTSANWALT“ in Word in Schritt 3 nicht genau so weit wie der Name,
+**Nur bei Fassung E bis H:** Reicht „RECHTSANWALT“ in Word in Schritt 3 nicht genau so weit wie der Name,
 die Zeile „R E C H T S A N W A L T“ markieren und **Strg + Umschalt + J** drücken (Ausrichtung „Verteilt“).
 Erst danach mit Schritt 4 weitermachen.
 
@@ -122,9 +132,9 @@ Den Weg über Word bietet das neue Outlook nicht. Bitte kurz Bescheid geben, dan
 
 ## Gut zu wissen
 
-- **Calisto MT** (Fassungen C bis F) wird mit Microsoft Office installiert.
+- **Calisto MT** (Fassungen C bis H) wird mit Microsoft Office installiert.
   Wer die Schrift nicht hat, z. B. am iPhone, sieht eine ähnliche Schrift (Book Antiqua, Palatino oder Georgia).
-- Bei **Fassung E und F** wird „RECHTSANWALT“ auf die Länge des Namens verteilt.
+- Bei **Fassung E bis H** wird „RECHTSANWALT“ auf die Länge des Namens verteilt.
   Mailprogramme, die das nicht können (z. B. Gmail), zeigen die Zeile etwas kürzer, aber gesperrt.
 - Der Hinweistext ist wortgleich übernommen.
   Er steht in Calibri 9 pt in Dunkelgrau, die drei Überschriften sind fett.
