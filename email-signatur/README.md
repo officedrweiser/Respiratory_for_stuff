@@ -28,11 +28,11 @@ Die Fassungen unterscheiden sich nur im Logo.
 
 ![Fassung F](vorschau-F.png)
 
-**G – wie E, Name in Großbuchstaben** („DR. MARTIN WEISER“, „RECHTSANWALT“ gleich lang)
+**G – Name in Großbuchstaben, „Rechtsanwalt“ klein** („DR. MARTIN WEISER“, darunter „Rechtsanwalt“ gleich lang)
 
 ![Fassung G](vorschau-G.png)
 
-**H – wie F, Name in Großbuchstaben und kursiv**
+**H – wie G, aber kursiv**
 
 ![Fassung H](vorschau-H.png)
 
