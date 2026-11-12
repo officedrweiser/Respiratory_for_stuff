@@ -72,6 +72,31 @@ Kopiert wird über Word, weil Outlook aus dem Browser keine Bilder mitnimmt.
 die Zeile „R E C H T S A N W A L T“ markieren und **Strg + Umschalt + J** drücken (Ausrichtung „Verteilt“).
 Erst danach mit Schritt 4 weitermachen.
 
+## Auf mehreren Computern einrichten
+
+Outlook speichert die Signatur auf jedem Computer einzeln.
+Laut den öffentlichen DNS-Einträgen von drweiser.at läuft die E-Mail über einen eigenen Mailserver (heitl.com) und nicht über Microsoft 365.
+Damit gleicht Outlook Signaturen nicht automatisch zwischen den Geräten ab.
+Am schnellsten geht es so: die Signatur auf **einem** Computer einrichten, prüfen und dann die fertigen Dateien auf die anderen kopieren.
+
+**Auf dem ersten Computer** (Signatur ist eingerichtet und mit einer Testmail geprüft):
+
+1. In Outlook auf **Datei → Optionen → E-Mail** gehen und die **Strg-Taste gedrückt halten**, während du auf **Signaturen…** klickst.
+   Der Signaturen-Ordner öffnet sich im Explorer.
+2. Diese Einträge auf einen USB-Stick oder ein gemeinsames Netzlaufwerk kopieren:
+   `Kanzlei.htm`, `Kanzlei.rtf`, `Kanzlei.txt` und den Ordner `Kanzlei-Dateien` (bei englischem Office `Kanzlei_files`).
+
+**Auf jedem weiteren Computer:**
+
+1. In Outlook wie oben mit **Strg + Klick** auf **Signaturen…** den Signaturen-Ordner öffnen.
+2. Outlook schließen.
+3. Die vier Einträge vom USB-Stick in diesen Ordner kopieren.
+   Fragt Windows nach dem Ersetzen, **Ersetzen** wählen.
+4. Outlook starten, unter **Datei → Optionen → E-Mail → Signaturen…** bei **Neue Nachrichten** und **Antworten/Weiterleitungen** „Kanzlei“ auswählen und mit **OK** bestätigen.
+
+Wer im Outlook prüfen will, wie das Konto eingebunden ist: **Datei → Kontoeinstellungen → Kontoeinstellungen…**.
+Die Spalte „Typ“ zeigt z. B. „Microsoft Exchange“ oder „IMAP/SMTP“.
+
 ## Plan B: Dateien direkt in den Signaturen-Ordner legen
 
 Nur nötig, falls die Bilder auch über Word nicht mitkommen.
