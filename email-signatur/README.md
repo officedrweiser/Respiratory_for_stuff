@@ -2,7 +2,7 @@
 
 Zentriert, in **Courier New**, mit langem rotem Strich und den Kontakt-Symbolen der Website.
 Darunter steht linksbündig der Hinweistext („Wichtiger Hinweis“, „Important Note“, „Hinweis DSGVO“) in **Calibri**, klein und grau.
-Die vier Fassungen unterscheiden sich nur im Logo.
+Die Fassungen unterscheiden sich nur im Logo.
 
 **A – Logo wie auf der Website** (Name in den Website-Schriften, als Bild)
 
@@ -20,6 +20,10 @@ Die vier Fassungen unterscheiden sich nur im Logo.
 
 ![Fassung D](vorschau-D.png)
 
+**E – Name in Calisto MT, „RECHTSANWALT“ gesperrt** (so lang wie „Dr. Martin Weiser“)
+
+![Fassung E](vorschau-E.png)
+
 ## Dateien
 
 | Datei | Wofür |
@@ -28,7 +32,8 @@ Die vier Fassungen unterscheiden sich nur im Logo.
 | `Signatur-B-alles-Courier-New.zip` | Fassung B zum Herunterladen |
 | `Signatur-C-Calisto-MT.zip` | Fassung C zum Herunterladen |
 | `Signatur-D-Calisto-MT-kursiv.zip` | Fassung D zum Herunterladen |
-| `A-…/`, `B-…/`, `C-…/`, `D-…/` | Inhalt der ZIP-Dateien |
+| `Signatur-E-Calisto-MT-gesperrt.zip` | Fassung E zum Herunterladen |
+| `A-…/` bis `E-…/` | Inhalt der ZIP-Dateien |
 
 Jede ZIP-Datei enthält:
 
@@ -58,6 +63,10 @@ Kopiert wird über Word, weil Outlook aus dem Browser keine Bilder mitnimmt.
 7. Rechts bei **Neue Nachrichten** und **Antworten/Weiterleitungen** jeweils „Kanzlei“ auswählen und mit **OK** bestätigen.
 8. Eine Testmail an die eigene Adresse und ans Handy schicken.
 
+**Nur bei Fassung E:** Reicht „RECHTSANWALT“ in Word in Schritt 3 nicht genau so weit wie der Name,
+die Zeile „R E C H T S A N W A L T“ markieren und **Strg + Umschalt + J** drücken (Ausrichtung „Verteilt“).
+Erst danach mit Schritt 4 weitermachen.
+
 ## Plan B: Dateien direkt in den Signaturen-Ordner legen
 
 Nur nötig, falls die Bilder auch über Word nicht mitkommen.
@@ -83,8 +92,10 @@ Den Weg über Word bietet das neue Outlook nicht. Bitte kurz Bescheid geben, dan
 
 ## Gut zu wissen
 
-- **Calisto MT** (Fassungen C und D) wird mit Microsoft Office installiert.
+- **Calisto MT** (Fassungen C, D und E) wird mit Microsoft Office installiert.
   Wer die Schrift nicht hat, z. B. am iPhone, sieht eine ähnliche Schrift (Book Antiqua, Palatino oder Georgia).
+- Bei **Fassung E** wird „RECHTSANWALT“ auf die Länge des Namens verteilt.
+  Mailprogramme, die das nicht können (z. B. Gmail), zeigen die Zeile etwas kürzer, aber gesperrt.
 - Der Hinweistext ist wortgleich übernommen.
   Er steht in Calibri 9 pt in Dunkelgrau, die drei Überschriften sind fett.
 - Die Symbole sind die der Website (Telefon, Adresse, E-Mail).
