@@ -1,0 +1,76 @@
+﻿E-MAIL-SIGNATUR KANZLEI DR. MARTIN WEISER - ANLEITUNG
+=====================================================
+
+INHALT
+  Windows-Outlook\Kanzlei.htm                Signatur mit "Sehr geehrte Damen und Herren!"
+  Windows-Outlook\Kanzlei ohne Anrede.htm    dieselbe Signatur ohne Anrede (z. B. für Antworten)
+  Windows-Outlook\bilder\                    Logo und Symbole, muss neben den .htm-Dateien bleiben
+  Mac\Kanzlei-Signatur.html                  für Apple Mail / Outlook für Mac (Bilder eingebaut)
+  Mac\Kanzlei-Signatur-ohne-Anrede.html      dasselbe ohne Anrede
+
+
+A) WINDOWS - KLASSISCHES OUTLOOK (oben links gibt es "Datei")
+-------------------------------------------------------------
+
+Auf dem ersten Computer:
+
+ 1. ZIP-Datei entpacken: Rechtsklick > "Alle extrahieren..." > "Extrahieren".
+ 2. Im entpackten Ordner "Windows-Outlook" Rechtsklick auf "Kanzlei.htm"
+    > "Öffnen mit" > "Word".
+ 3. Gelber Balken "Geschützte Ansicht"? > "Bearbeitung aktivieren".
+    Logo und Symbole müssen jetzt zu sehen sein.
+    Reicht "R e c h t s a n w a l t" nicht genau bis zum Ende des Namens:
+    die Zeile markieren und Strg + Umschalt + J drücken.
+ 4. Strg + A, dann Strg + C. Word schließen, NICHT speichern.
+ 5. Outlook: Datei > Optionen > E-Mail > "Signaturen...".
+    Alte Signatur "Kanzlei" auswählen > "Löschen".
+    Dann "Neu" > Name "Kanzlei" > OK.
+ 6. In das Feld "Signatur bearbeiten" klicken, Strg + V, "Speichern".
+ 7. Optional: Schritte 2 bis 6 mit "Kanzlei ohne Anrede.htm" wiederholen,
+    Name "Kanzlei ohne Anrede".
+ 8. Rechts unter "Standardsignatur auswählen":
+      Neue Nachrichten:           Kanzlei
+      Antworten/Weiterleitungen:  Kanzlei  (oder "Kanzlei ohne Anrede")
+    > OK.
+ 9. Testmail an die eigene Adresse schicken.
+
+Den Text schreibt man in die Leerzeilen unter "Sehr geehrte Damen und Herren!".
+Er hat dort automatisch dieselbe Schrift und Größe (Courier New 11).
+
+Auf den anderen Computern (statt alles neu zu machen):
+
+ 1. Am ersten Computer: Datei > Optionen > E-Mail,
+    Strg-Taste gedrückt halten und auf "Signaturen..." klicken.
+    Der Signaturen-Ordner öffnet sich.
+ 2. Alles, was mit "Kanzlei" beginnt (Dateien und der Ordner
+    "Kanzlei-Dateien"), auf einen USB-Stick kopieren.
+ 3. Am nächsten Computer den Ordner genauso öffnen, Outlook schließen,
+    alles hineinkopieren und "Ersetzen" wählen.
+ 4. Outlook starten und unter "Signaturen..." die Standardsignaturen
+    wie in Schritt 8 auswählen.
+
+Optional, damit auch sonst alles in derselben Schrift geschrieben wird:
+Datei > Optionen > E-Mail > "Briefpapier und Schriftarten..." >
+bei "Neue E-Mail-Nachrichten" und "Antworten oder Weiterleiten" jeweils
+"Schriftart..." > Courier New, Schriftgrad 11 > OK.
+
+
+B) MAC (Apple Mail oder Outlook für Mac)
+----------------------------------------
+
+ 1. ZIP-Datei mit Doppelklick entpacken.
+ 2. Im Ordner "Mac" die Datei "Kanzlei-Signatur.html" in Safari öffnen.
+ 3. Cmd + A, dann Cmd + C.
+ 4. Apple Mail: Mail > Einstellungen > Signaturen > "+" > einfügen (Cmd + V).
+    Unter dem Signaturfeld das Häkchen bei der Standardschrift entfernen.
+    Outlook für Mac: Outlook > Einstellungen > Signaturen > Neu > einfügen.
+
+
+GUT ZU WISSEN
+-------------
+- Die Signatur wird auf jedem Computer einzeln gespeichert.
+- Telefon, E-Mail-Adresse und Website sind verlinkt. Die Website-Links
+  gehen auf https://drweiser.at (ohne "www"), weil das Zertifikat der
+  Website nur dafür gilt.
+- Calisto MT kommt mit Microsoft Office. Wer sie nicht hat (z. B. iPhone),
+  sieht eine ähnliche Schrift.
