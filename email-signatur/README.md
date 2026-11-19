@@ -1,7 +1,8 @@
 # E-Mail-Signatur – Kanzlei Dr. Martin Weiser
 
 Endgültige Fassung: oben „Sehr geehrte Damen und Herren!“, darunter Platz für den Text und die zentrierte Signatur.
-Die Signatur besteht aus dem roten MW-Zeichen, „DR. MARTIN WEISER“ in Calisto MT kursiv und „Rechtsanwalt“ auf dieselbe Länge gesperrt.
+Die Signatur besteht aus dem roten MW-Zeichen, „DR. MARTIN WEISER“ in Palatino kursiv und „Rechtsanwalt“ auf dieselbe Länge gesperrt.
+MW-Zeichen, Name und „Rechtsanwalt“ sind zusammen **ein Bild**, damit beim Versenden nichts verrutscht.
 Grußformel, Kontaktdaten und Anrede stehen in Courier New 11 pt, die Kontaktdaten mit den Symbolen der Website.
 Ganz unten folgt der Hinweistext in Calibri, klein und grau.
 
@@ -28,7 +29,6 @@ Auf dem **ersten Computer**:
 1. Die ZIP-Datei mit Rechtsklick → **Alle extrahieren…** → **Extrahieren** entpacken.
 2. Im Ordner `Windows-Outlook` mit Rechtsklick auf `Kanzlei.htm` → **Öffnen mit** → **Word** gehen.
 3. Erscheint ein gelber Balken „Geschützte Ansicht“, auf **Bearbeitung aktivieren** klicken.
-   Reicht „R e c h t s a n w a l t“ nicht genau bis zum Ende des Namens, die Zeile markieren und **Strg + Umschalt + J** drücken.
 4. **Strg + A** und dann **Strg + C** drücken. Danach Word schließen, ohne zu speichern.
 5. In Outlook auf **Datei → Optionen → E-Mail → Signaturen…** gehen.
    Die alte Signatur „Kanzlei“ **löschen**, dann auf **Neu** klicken und „Kanzlei“ eingeben.
@@ -71,8 +71,8 @@ Dort bei „Neue E-Mail-Nachrichten“ und „Antworten oder Weiterleiten“ jew
   Die E-Mail läuft laut DNS über einen eigenen Mailserver (heitl.com) und nicht über Microsoft 365, daher gibt es keinen automatischen Abgleich.
 - Telefonnummer, E-Mail-Adresse und Website sind verlinkt.
   Die Website-Links führen auf https://drweiser.at ohne „www“, weil das Sicherheitszertifikat der Website nur dafür gilt.
-- **Calisto MT** kommt mit Microsoft Office.
-  Wer die Schrift nicht hat, z. B. am iPhone, sieht eine ähnliche Schrift (Book Antiqua, Palatino oder Georgia).
-- In Mailprogrammen ohne „verteilte“ Ausrichtung (z. B. Gmail) ist „Rechtsanwalt“ etwas kürzer als der Name, aber gesperrt.
+- **Warum ein Bild:** Outlook nimmt beim Versenden nur die erste Schrift aus der Liste.
+  Ist sie nicht installiert, setzt es Times New Roman ein. Außerdem gingen dabei die Bündigkeit von „Rechtsanwalt“ und der Zeilenabstand verloren.
+  Als Bild sieht der Schriftzug überall gleich aus, auch beim Empfänger.
 - Der Hinweistext ist wortgleich übernommen.
-- Die Vorschau entstand mit Ersatzschriften, die Courier New, Calisto MT und Calibri sehr ähnlich sehen.
+- Die Vorschau entstand mit Ersatzschriften, die Courier New und Calibri sehr ähnlich sehen.

@@ -18,12 +18,10 @@ Auf dem ersten Computer:
  2. Im entpackten Ordner "Windows-Outlook" Rechtsklick auf "Kanzlei.htm"
     > "Öffnen mit" > "Word".
  3. Gelber Balken "Geschützte Ansicht"? > "Bearbeitung aktivieren".
-    Logo und Symbole müssen jetzt zu sehen sein.
-    Reicht "R e c h t s a n w a l t" nicht genau bis zum Ende des Namens:
-    die Zeile markieren und Strg + Umschalt + J drücken.
+    Logo, Name und Symbole müssen jetzt zu sehen sein.
  4. Strg + A, dann Strg + C. Word schließen, NICHT speichern.
  5. Outlook: Datei > Optionen > E-Mail > "Signaturen...".
-    Alte Signatur "Kanzlei" auswählen > "Löschen".
+    Alte Signatur "Kanzlei" (und ggf. "Kanzlei ohne Anrede") auswählen > "Löschen".
     Dann "Neu" > Name "Kanzlei" > OK.
  6. In das Feld "Signatur bearbeiten" klicken, Strg + V, "Speichern".
  7. Optional: Schritte 2 bis 6 mit "Kanzlei ohne Anrede.htm" wiederholen,
@@ -72,5 +70,7 @@ GUT ZU WISSEN
 - Telefon, E-Mail-Adresse und Website sind verlinkt. Die Website-Links
   gehen auf https://drweiser.at (ohne "www"), weil das Zertifikat der
   Website nur dafür gilt.
-- Calisto MT kommt mit Microsoft Office. Wer sie nicht hat (z. B. iPhone),
-  sieht eine ähnliche Schrift.
+- Logo, "DR. MARTIN WEISER" und "Rechtsanwalt" sind gemeinsam EIN Bild.
+  So bleiben Schrift, Bündigkeit und Abstand beim Versenden genau gleich.
+- Eigene Zeilen, die ihr in Outlook in die alte Signatur eingefügt habt
+  (z. B. "Im Anhang finden Sie ..."), nach dem Austausch wieder ergänzen.
