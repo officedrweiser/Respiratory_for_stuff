@@ -1,7 +1,7 @@
 # E-Mail-Signatur – Kanzlei Dr. Martin Weiser
 
 Endgültige Fassung: oben „Sehr geehrte Damen und Herren!“, darunter Platz für den Text und die zentrierte Signatur.
-Die Signatur besteht aus dem roten MW-Zeichen, „DR. MARTIN WEISER“ in Palatino kursiv und „Rechtsanwalt“ auf dieselbe Länge gesperrt.
+Die Signatur besteht aus dem roten MW-Zeichen, „DR. MARTIN WEISER“ in Palatino kursiv und „Rechtsanwalt“ fett, auf dieselbe Länge gesperrt.
 MW-Zeichen, Name und „Rechtsanwalt“ sind zusammen **ein Bild**, damit beim Versenden nichts verrutscht.
 Grußformel, Kontaktdaten und Anrede stehen in Courier New 11 pt, die Kontaktdaten mit den Symbolen der Website.
 Ganz unten folgt der Hinweistext in Calibri, klein und grau.
